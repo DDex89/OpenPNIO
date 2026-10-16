@@ -15,7 +15,7 @@ static int apply(void *ctx,const uint8_t ip[4],const uint8_t mask[4],
 }
 int main(void)
 {
-    uint8_t req[44]={0},res[128];
+    uint8_t req[128]={0},res[128];
     const uint8_t mac[6]={2,0,0,0,0,1};
     const uint8_t ip[12]={192,168,1,42,255,255,255,0,192,168,1,1};
     state_t state={{0},{0},{0},0,0};
@@ -46,6 +46,16 @@ int main(void)
     assert(state.calls==1);
     assert(openpnio_dcp_handle_set_ex(req,sizeof req,mac,&handlers,res,30,&written)==-1);
     assert(state.calls==1);
+    req[31]=2; /* unknown DCP qualifier */
+    assert(openpnio_dcp_handle_set_ex(req,44,mac,&handlers,res,sizeof res,&written)==1);
+    assert(res[32]==5 && state.calls==1);
+    req[31]=1;
+    /* Reject multi-block Set before callback; never apply partially. */
+    memcpy(req+44,req+26,18);
+    req[25]=36;
+    assert(openpnio_dcp_handle_set_ex(req,62,mac,&handlers,res,sizeof res,&written)==-1);
+    assert(state.calls==1);
+    req[25]=18;
     handlers.set_ip_suite=0;
     assert(openpnio_dcp_handle_set_ex(req,sizeof req,mac,&handlers,res,sizeof res,&written)==1);
     assert(state.calls==1);
