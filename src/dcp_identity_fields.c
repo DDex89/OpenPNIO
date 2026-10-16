@@ -17,11 +17,6 @@ static void put16(uint8_t *p, uint16_t n)
 {
     p[0]=(uint8_t)(n>>8); p[1]=(uint8_t)n;
 }
-static void put32(uint8_t *p, uint32_t n)
-{
-    p[0]=(uint8_t)(n>>24); p[1]=(uint8_t)(n>>16);
-    p[2]=(uint8_t)(n>>8); p[3]=(uint8_t)n;
-}
 int openpnio_dcp_identity_field(const openpnio_dcp_identity_t *identity,
                                const uint8_t device_mac[6],
                                uint8_t option, uint8_t suboption,
@@ -57,8 +52,8 @@ int openpnio_dcp_identity_field(const openpnio_dcp_identity_t *identity,
         out->data=openpnio_dcp_device_options;
         out->size=openpnio_dcp_device_options_size;
     } else if(option==2 && suboption==7) {
-        put32(out->scratch,identity->device_instance);
-        out->data=out->scratch; out->size=4;
+        put16(out->scratch,identity->device_instance);
+        out->data=out->scratch; out->size=2;
     } else {
         return 0;
     }
