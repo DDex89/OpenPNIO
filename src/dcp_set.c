@@ -42,8 +42,8 @@ int openpnio_dcp_handle_set(const uint8_t *request,size_t request_size,
        requests rather than applying only their first part. */
     openpnio_dcp_cursor_init(&cursor,hdr.blocks,hdr.blocks_length);
     while((next=openpnio_dcp_next_block(&cursor,&block))>0) {
-        if(block.data_length<2 || pos>capacity || capacity-pos<10) return -1;
-        pos+=10; /* Control/Response block: 4 header + 3 bytes + padding */
+        if(block.data_length<2 || pos>capacity || capacity-pos<8) return -1;
+        pos+=8; /* Control/Response block: 4 header + 3 bytes + padding */
     }
     if(next<0 || pos-26>65535u || capacity<pos) return -1;
     memcpy(response,frame.src,6);
@@ -81,7 +81,6 @@ int openpnio_dcp_handle_set(const uint8_t *request,size_t request_size,
         response[pos+7]=0; /* even-byte padding */
         pos+=8;
     }
-    /* Actual response block length is 8 bytes, not 10. */
     put16(response+24,(uint16_t)(pos-26));
     *written=pos;
     return 1;
