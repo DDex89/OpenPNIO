@@ -42,7 +42,13 @@ To **also persist** station-name changes across restarts, provide a writable fil
 sudo ./build/openpnio_dcp_probe eth0 --allow-set-name --station-file /var/tmp/openpnio-station-name
 ```
 
-The state file is a plain ASCII station name plus a newline. It is only read on startup. Updates use a temporary file and atomic rename. Without `--allow-set-name`, Set name replies `Set not possible`; the state file may still be read if specified.
+**BlockQualifier semantics (implemented, newly awaiting physical persistence validation):**
+- Qualifier `0x0000`: **temporary**, modify active RAM name only; never touch `--station-file` even if one is supplied.
+- Qualifier `0x0001`: **permanent**, requires both `--allow-set-name` **and** `--station-file`, writes atomically, then changes active name. If no file is configured or the write fails, returns `Set not possible` and keeps the old active name.
+- Other qualifiers: rejected without invoking application callback.
+- Multiple Set blocks in one request: currently rejected **before changing any setting**, pending transactional processing support.
+
+The state file is a plain ASCII station name plus a newline, read on startup. Updates use a temporary file and atomic rename. Without `--allow-set-name`, all station-name Set requests return `Set not possible`; the existing saved name may still be read on startup. The Linux hostname is independent and remains unchanged.
 
 DCP Set IP always refuses any **change** with status `5` (`Set not possible`). If the requested IP, netmask **and gateway** already match the live interface, it replies status `0` as a no-op. **No SSH-disrupting address changes are implemented.** A guarded `temporary`/`persistent` backend is **proposed**, not implemented; see [ADR 0008](decisions/0008-dcp-ip-assignment-policy.md) and [IP Set work item](https://github.com/DDex89/OpenPNIO/issues/3).
 
@@ -66,6 +72,9 @@ $mac = "b8:27:eb:bb:9e:7a"
 py "$env:USERPROFILE\dcp_client.py" --iface $iface
 py "$env:USERPROFILE\dcp_client.py" --iface $iface --get-name $mac
 py "$env:USERPROFILE\dcp_client.py" --iface $iface --get-ip $mac
+py "$env:USERPROFILE\dcp_client.py" --iface $iface --get-options $mac
+py "$env:USERPROFILE\dcp_client.py" --iface $iface --get-id $mac
+py "$env:USERPROFILE\dcp_client.py" --iface $iface --get-instance $mac
 ```
 
 **Optional state-changing test, only on an isolated test network and after starting the responder with `--allow-set-name`:**
@@ -74,6 +83,15 @@ py "$env:USERPROFILE\dcp_client.py" --iface $iface --get-ip $mac
 py "$env:USERPROFILE\dcp_client.py" --iface $iface --set-name $mac openpnio-lab --confirm-set
 py "$env:USERPROFILE\dcp_client.py" --iface $iface --get-name $mac
 ```
+
+To **test persistent station name** (only on isolated bench LAN), stop the responder and relaunch it with `--allow-set-name --station-file /var/tmp/openpnio-station-name`; then run:
+
+```powershell
+py "$env:USERPROFILE\dcp_client.py" --iface $iface --set-name $mac openpnio-saved --permanent-name --confirm-set
+py "$env:USERPROFILE\dcp_client.py" --iface $iface --get-name $mac
+```
+
+Restart the responder with the **same** `--station-file` path and issue Get Name once more. It should still return `openpnio-saved`. `--permanent-name` sends the standard BlockQualifier `0x0001`; without it the client explicitly requests **temporary** Set (`0x0000`). **Do not confuse a successful RAM-only Set with persistent configuration.** This experiment has not yet been run on the user's hardware.
 
 `--set-ip MAC IP MASK GATEWAY --confirm-set` exists for testing DCP Set status codes. It cannot reconfigure the Raspberry Pi interface. The CLI requires explicit `--confirm-set` for every Set operation.
 
@@ -90,7 +108,8 @@ The `0x8892` EtherType may be shown as `Unknown` by tcpdump; this does not indic
 ## Limits
 
 - Initial implementation supports only untagged outgoing replies. VLAN-tagged reception depends on Ethernet/socket handling and is not verified.
-- Only selected DCP Get fields (Name, Type, ID, Role and IP suite) are supported; unsupported selectors receive no reply.
+- Supported DCP Get fields: MAC address (01/01), IP suite (01/02), Type (02/01), Name (02/02), DeviceID (02/03), Role (02/04), DeviceOptions (02/05) and DeviceInstance (02/07). Other selectors receive no reply.
+- Identify emits 7 corresponding metadata blocks (excluding the redundant Get-MAC block) and supports filter selectors by Name, Type and DeviceID plus FF/FF Identify All. VendorID/DeviceID remain clearly identified lab placeholders; this does not establish certified PROFINET identity.
 - DCP response-delay scheduling, multiple network-interface lifecycles, GSDML and PROFINET IO-Controller association are not implemented.
 - A device's PROFINET station name is **not** its Linux hostname.
 - No PLC interoperability or PROFINET conformance has been established.
