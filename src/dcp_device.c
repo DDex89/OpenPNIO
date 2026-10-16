@@ -29,6 +29,12 @@ int openpnio_dcp_handle_identify(const uint8_t *request, size_t request_size,
     station_len = strlen(identity->station_name);
     openpnio_dcp_cursor_init(&cursor, header.blocks, header.blocks_length);
     while ((next = openpnio_dcp_next_block(&cursor, &block)) > 0) {
+        /* Identify All selector: FF/FF with an empty value.
+         * Real scanners send this TLV rather than an empty DCP block list. */
+        if (block.option == 0xff && block.suboption == 0xff) {
+            if (block.data_length != 0) return 0;
+            continue;
+        }
         /* NameOfStation selector: exact, case-sensitive byte comparison.
          * Other selectors are intentionally unsupported, not ignored. */
         if (block.option != 2 || block.suboption != 2) return 0;
