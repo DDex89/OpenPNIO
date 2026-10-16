@@ -13,7 +13,7 @@ Actual captured transaction (example):
 - Two timestamps in a single tcpdump capture were 343 microseconds apart. **Not** a guaranteed realtime latency measurement.
 - The test uncovered and fixed a bug in the original Identify-All `FF/FF` handling.
 
-This demonstrates real DCP discovery only, **not** interoperability with Siemens S7-1500.
+**Update:** subsequent physical tests on 2026-10-17 also verified **DCP Get IP, DCP Get Name, Set Name (in-memory), successful Get readback, rejection of a changed IP and unchanged-IP readback**. All seven Pi ARMv6 CTests passed. The complete evidence, packet XIDs, commands, tested/non-tested distinctions are recorded in the [DCP hardware validation report](hardware-validation-2026-10-17.md). These successful DCP tests are **not** evidence of interoperability with Siemens S7-1500.
 
 ## Linux build and run
 
@@ -44,7 +44,7 @@ sudo ./build/openpnio_dcp_probe eth0 --allow-set-name --station-file /var/tmp/op
 
 The state file is a plain ASCII station name plus a newline. It is only read on startup. Updates use a temporary file and atomic rename. Without `--allow-set-name`, Set name replies `Set not possible`; the state file may still be read if specified.
 
-DCP Set IP always refuses any **change** with status `5` (`Set not possible`). If the requested IP, netmask **and gateway** already match the live interface, it replies status `0` as a no-op. **No SSH-disrupting address changes are implemented.**
+DCP Set IP always refuses any **change** with status `5` (`Set not possible`). If the requested IP, netmask **and gateway** already match the live interface, it replies status `0` as a no-op. **No SSH-disrupting address changes are implemented.** A guarded `temporary`/`persistent` backend is **proposed**, not implemented; see [ADR 0008](decisions/0008-dcp-ip-assignment-policy.md) and [IP Set work item](https://github.com/DDex89/OpenPNIO/issues/3).
 
 DCP Set is experimental and unauthenticated at Ethernet layer; enabling it on shared networks is inappropriate.
 
