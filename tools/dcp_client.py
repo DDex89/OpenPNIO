@@ -58,10 +58,17 @@ def parse_blocks(blocks):
         option, suboption, size = struct.unpack_from("!BBH", blocks, pos)
         start = pos + 4
         end = start + size
-        if size < 2 or end > len(blocks) or end + (size & 1) > len(blocks):
+        if end > len(blocks) or end + (size & 1) > len(blocks):
             raise ValueError("Malformed DCP response block")
-        info = int.from_bytes(blocks[start:start+2], "big")
-        decoded.append((option, suboption, info, blocks[start+2:end]))
+        if (option, suboption) == (5, 4):
+            # Set Control/Response has three status bytes, NOT a BlockInfo.
+            info, value = None, blocks[start:end]
+        else:
+            if size < 2:
+                raise ValueError("DCP response block lacks BlockInfo")
+            info = int.from_bytes(blocks[start:start+2], "big")
+            value = blocks[start+2:end]
+        decoded.append((option, suboption, info, value)
         pos = end + (size & 1)
     return decoded
 
