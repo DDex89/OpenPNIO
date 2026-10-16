@@ -152,12 +152,17 @@ def main():
     group = p.add_mutually_exclusive_group()
     group.add_argument("--get-name", metavar="MAC", help="DCP Get station name")
     group.add_argument("--get-ip", metavar="MAC", help="DCP Get IP, mask, gateway")
+    group.add_argument("--get-id", metavar="MAC", help="DCP Get vendor/device ID")
+    group.add_argument("--get-options", metavar="MAC", help="DCP Get supported option pairs")
+    group.add_argument("--get-instance", metavar="MAC", help="DCP Get device instance")
     group.add_argument("--set-name", nargs=2, metavar=("MAC", "NAME"),
                        help="DCP Set station name (opt-in)")
     group.add_argument("--set-ip", nargs=4, metavar=("MAC", "IP", "MASK", "GATEWAY"),
                        help="DCP Set IP suite (opt-in; the Pi will refuse changes)")
     p.add_argument("--confirm-set", action="store_true",
                    help="Confirm sending a network configuration request")
+    p.add_argument("--permanent-name", action="store_true",
+                   help="Set Name with BlockQualifier=1 (requires Pi --station-file)")
     args = p.parse_args()
     from scapy.all import show_interfaces
     if args.list:
@@ -167,14 +172,22 @@ def main():
         p.error("Provide --iface or use --list")
     if args.timeout < 0.1 or args.timeout > 30:
         p.error("--timeout must be between 0.1 and 30 seconds")
+    if args.permanent_name and not args.set_name:
+        p.error("--permanent-name requires --set-name and --confirm-set")
     xid = secrets.randbits(32)
     dst = DCP_MULTICAST
     response_frame = 0xFEFF
     service = 5
     requested = None
-    if args.get_name or args.get_ip:
-        dst = args.get_name or args.get_ip
-        requested = (2,2) if args.get_name else (1,2)
+    get_fields = (
+        (args.get_name, (2, 2)),
+        (args.get_ip, (1, 2)),
+        (args.get_id, (2, 3)),
+        (args.get_options, (2, 5)),
+        (args.get_instance, (2, 7)),
+    )
+    if any(mac for mac, _field in get_fields):
+        dst, requested = next((mac, field) for mac, field in get_fields if mac)
         payload = make_get(xid, *requested)
         response_frame, service = 0xFEFD, 3
     elif args.set_name or args.set_ip:
@@ -195,7 +208,8 @@ def main():
                 value = b"".join(ipaddress.IPv4Address(x).packed for x in (ip,mask,gw))
             except ipaddress.AddressValueError as exc:
                 p.error(str(exc))
-        payload = make_set(xid, *requested, value)
+        qualifier = 1 if args.permanent_name else 0
+        payload = make_set(xid, *requested, value, qualifier=qualifier)
         response_frame, service = 0xFEFD, 4
     else:
         payload = make_identify(xid)
@@ -223,6 +237,21 @@ def main():
                 print("  IP:", ip_text(ip[0:4]))
                 print("  Mask:", ip_text(ip[4:8]))
                 print("  Gateway:", ip_text(ip[8:12]))
+            device_id = find_value(blocks, 2, 3)
+            if device_id is not None and len(device_id) == 4:
+                vendor, device = struct.unpack("!HH", device_id)
+                print(f"  VendorID: 0x{vendor:04X}, DeviceID: 0x{device:04X}")
+            device_options = find_value(blocks, 2, 5)
+            if device_options is not None and len(device_options) % 2 == 0:
+                entries = [f"{device_options[i]:02X}/{device_options[i+1]:02X}"
+                           for i in range(0, len(device_options), 2)]
+                print("  DeviceOptions:", ", ".join(entries))
+            instance = find_value(blocks, 2, 7)
+            if instance is not None and len(instance) == 2:
+                print(f"  DeviceInstance: 0x{int.from_bytes(instance, 'big'):04X}")
+            role = find_value(blocks, 2, 4)
+            if role is not None and len(role) == 2:
+                print(f"  DeviceRole: 0x{role[0]:02X}")
             if requested and find_value(blocks, *requested) is None:
                 print("  Requested DCP field was not provided")
     print(f"Found {len(replies)} DCP response(s).")
