@@ -41,6 +41,22 @@ int main(void)
     assert(frame.frame_id==0xfeff && memcmp(frame.dst,req+6,6)==0);
     assert(openpnio_dcp_parse_header(frame.payload,frame.payload_size,&h)==OPENPNIO_DCP_OK);
     assert(h.xid==0x12345678);
+    /* Real Windows/Scapy Identify All request: FF FF 00 00 followed
+     * by zero Ethernet padding to a 60-byte frame (without FCS). */
+    n=request(req,NULL);
+    req[24]=0;req[25]=4;
+    req[26]=0xff;req[27]=0xff;req[28]=0;req[29]=0;
+    memset(req+30,0,30);
+    n=60;
+    assert(openpnio_dcp_handle_identify(req,n,mac,&id,reply,sizeof reply,&out)==1);
+    assert(openpnio_parse_frame(reply,out,&frame)==OPENPNIO_FRAME_OK);
+    assert(frame.frame_id==0xfeff && memcmp(frame.dst,req+6,6)==0);
+    assert(openpnio_dcp_parse_header(frame.payload,frame.payload_size,&h)==OPENPNIO_DCP_OK);
+    assert(h.xid==0x12345678);
+    /* Nonempty Identify All is unsupported (not silently accepted). */
+    req[28]=0;req[29]=2;req[24]=0;req[25]=6;
+    assert(openpnio_dcp_handle_identify(req,n,mac,&id,reply,sizeof reply,&out)==0);
+    assert(out==0);
     n=request(req,"openpnio");
     assert(openpnio_dcp_handle_identify(req,n,mac,&id,reply,sizeof reply,&out)==1);
     n=request(req,"another");
