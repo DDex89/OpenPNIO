@@ -89,16 +89,22 @@ static int read_station_file(const char *path, char name[241])
 static int set_name(void *ctx, const char *name, size_t n, uint16_t qualifier)
 {
     bench_t *state=(bench_t*)ctx;
-    (void)qualifier; /* Persistence depends on explicit --station-file. */
-    if (!state->allow_set_name || !valid_station_name(name,n)) return -1;
-    if (state->station_file && save_station_file(state->station_file,name,n)!=0) {
+    /* DCP BlockQualifier: 0 = temporary, 1 = permanent.
+     * Never claim a permanent Set succeeded without persistence. */
+    if (!state->allow_set_name || qualifier>1 ||
+        !valid_station_name(name,n)) return -1;
+    if (qualifier==1 && !state->station_file) {
+        fprintf(stderr,"Permanent DCP Set requires --station-file\n");
+        return -1;
+    }
+    if (qualifier==1 && save_station_file(state->station_file,name,n)!=0) {
         perror("Saving station name");
         return -1;
     }
     memcpy(state->station_name,name,n);
     state->station_name[n]='\0';
     printf("DCP Set station name -> %s%s\n",state->station_name,
-           state->station_file ? " (saved)" : " (RAM only)");
+           qualifier==1 ? " (persisted)" : " (RAM only)");
     fflush(stdout);
     return 0;
 }
@@ -107,9 +113,8 @@ static int set_ip_safe(void *ctx, const uint8_t ip[4],
                        uint16_t qualifier)
 {
     bench_t *state=(bench_t*)ctx;
-    (void)qualifier;
     /* A matching request is a no-op. All changes are refused to protect SSH. */
-    return (memcmp(ip,state->identity.ip,4)==0 &&
+    return (qualifier<=1 && memcmp(ip,state->identity.ip,4)==0 &&
             memcmp(mask,state->identity.netmask,4)==0 &&
             memcmp(gw,state->identity.gateway,4)==0) ? 0 : -1;
 }
