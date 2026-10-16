@@ -32,6 +32,7 @@ int openpnio_dcp_handle_set_ex(const uint8_t *request,size_t request_size,
     openpnio_dcp_block_t block;
     size_t pos=26;
     int next;
+    size_t block_count=0;
     if(!request||!device_mac||!response||!written) return -1;
     *written=0;
     if(openpnio_parse_frame(request,request_size,&frame)!=OPENPNIO_FRAME_OK) return -1;
@@ -44,8 +45,11 @@ int openpnio_dcp_handle_set_ex(const uint8_t *request,size_t request_size,
     while((next=openpnio_dcp_next_block(&cursor,&block))>0) {
         if(block.data_length<2 || pos>capacity || capacity-pos<8) return -1;
         pos+=8; /* Control/Response block: 4 header + 3 bytes + padding */
+        ++block_count;
     }
-    if(next<0 || pos-26>65535u || capacity<pos) return -1;
+    /* Multi-block Set is not transactional yet. Reject it before invoking
+     * any setter, rather than partially applying the first suboption. */
+    if(next<0 || block_count!=1 || pos-26>65535u || capacity<pos) return -1;
     memcpy(response,frame.src,6);
     memcpy(response+6,device_mac,6);
     put16(response+12,0x8892);
@@ -67,7 +71,8 @@ int openpnio_dcp_handle_set_ex(const uint8_t *request,size_t request_size,
                     const uint8_t *mask=block.data+6;
                     const uint8_t *gateway=block.data+10;
                     uint16_t qualifier=be16(block.data);
-                    if(handlers->set_ip_suite(handlers->context,ip,mask,gateway,qualifier)==0)
+                    if(qualifier<=1 &&
+                       handlers->set_ip_suite(handlers->context,ip,mask,gateway,qualifier)==0)
                         status=OPENPNIO_SET_OK;
                 }
             }
@@ -79,7 +84,8 @@ int openpnio_dcp_handle_set_ex(const uint8_t *request,size_t request_size,
                 size_t n=block.data_length-2;
                 uint16_t qualifier=be16(block.data);
                 status=OPENPNIO_SET_NOT_POSSIBLE;
-                if(handlers && handlers->set_station_name && valid_name(name,n)) {
+                if(qualifier<=1 && handlers && handlers->set_station_name &&
+                   valid_name(name,n)) {
                     char temp[241];
                     memcpy(temp,name,n);
                     temp[n]='\0';
