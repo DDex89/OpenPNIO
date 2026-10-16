@@ -26,4 +26,8 @@ if(BUILD_TESTING)
     add_executable(test_dcp_set tests/test_dcp_set.c)
     target_link_libraries(test_dcp_set PRIVATE openpnio)
     add_test(NAME dcp_set_station_name COMMAND test_dcp_set)
+
+    add_executable(test_dcp_ip tests/test_dcp_ip.c)
+    target_link_libraries(test_dcp_ip PRIVATE openpnio)
+    add_test(NAME dcp_set_ip_suite COMMAND test_dcp_ip)
 endif()
