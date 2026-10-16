@@ -1,6 +1,7 @@
 #include "openpnio/dcp_device.h"
 #include "openpnio/dcp.h"
 #include "openpnio/frame.h"
+#include "dcp_identity_fields.h"
 #include <string.h>
 static const uint8_t identify_multicast[6] = {0x01,0x0e,0xcf,0x00,0x00,0x00};
 int openpnio_dcp_handle_identify(const uint8_t *request, size_t request_size,
@@ -13,7 +14,6 @@ int openpnio_dcp_handle_identify(const uint8_t *request, size_t request_size,
     openpnio_dcp_header_t header;
     openpnio_dcp_cursor_t cursor;
     openpnio_dcp_block_t block;
-    size_t station_len;
     int next;
     if (!request || !device_mac || !identity || !identity->station_name ||
         !response || !response_size) return -1;
@@ -26,7 +26,6 @@ int openpnio_dcp_handle_identify(const uint8_t *request, size_t request_size,
     if (openpnio_dcp_parse_header(frame.payload, frame.payload_size, &header) != OPENPNIO_DCP_OK)
         return -1;
     if (header.service_id != 5 || header.service_type != 0) return 0;
-    station_len = strlen(identity->station_name);
     openpnio_dcp_cursor_init(&cursor, header.blocks, header.blocks_length);
     while ((next = openpnio_dcp_next_block(&cursor, &block)) > 0) {
         /* Identify All selector: FF/FF with an empty value.
@@ -35,11 +34,21 @@ int openpnio_dcp_handle_identify(const uint8_t *request, size_t request_size,
             if (block.data_length != 0) return 0;
             continue;
         }
-        /* NameOfStation selector: exact, case-sensitive byte comparison.
-         * Other selectors are intentionally unsupported, not ignored. */
-        if (block.option != 2 || block.suboption != 2) return 0;
-        if (block.data_length != station_len ||
-            memcmp(block.data, identity->station_name, station_len) != 0) return 0;
+        /* TIA/other clients can also select by TypeOfStation or DeviceID.
+         * Selectors carry the requested value without a BlockInfo prefix.
+         * Unknown selectors remain explicitly unsupported. */
+        if (block.option == 2 &&
+            (block.suboption == 1 || block.suboption == 2 ||
+             block.suboption == 3)) {
+            openpnio_dcp_field_t value;
+            if (openpnio_dcp_identity_field(identity,device_mac,
+                                            block.option,block.suboption,&value)!=1)
+                return -1;
+            if (block.data_length != value.size ||
+                memcmp(block.data,value.data,value.size)!=0) return 0;
+            continue;
+        }
+        return 0;
     }
     if (next < 0) return -1;
     if (openpnio_dcp_identify_response(frame.src, device_mac, header.xid,
