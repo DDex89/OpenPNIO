@@ -60,6 +60,24 @@ int main(void)
     assert(store.calls==1);
     assert(openpnio_dcp_handle_set(req,n,mac,save,&store,res,30,&w)==-1);
     assert(store.calls==1);
+    /* The temporary qualifier 0 is passed through to application storage. */
+    n=make_request(req,"temp-name",2,2);
+    req[31]=0;
+    assert(openpnio_dcp_handle_set(req,n,mac,save,&store,res,sizeof res,&w)==1);
+    assert(store.calls==2 && store.qualifier==0);
+    /* Unsupported qualifiers must never call the application. */
+    n=make_request(req,"openpnio",2,2);
+    req[31]=2;
+    assert(openpnio_dcp_handle_set(req,n,mac,save,&store,res,sizeof res,&w)==1);
+    assert(res[32]==5 && store.calls==2);
+    /* Two valid blocks are refused before either setter can run; no
+     * partially applied station configuration is allowed. */
+    n=make_request(req,"first-name",2,2);
+    memcpy(req+n,req+26,n-26);
+    req[25]=(uint8_t)(2*(n-26));
+    n+=n-26;
+    assert(openpnio_dcp_handle_set(req,n,mac,save,&store,res,sizeof res,&w)==-1);
+    assert(store.calls==2);
     puts("DCP Set station-name tests passed");
     return 0;
 }
