@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.16)
 project(OpenPNIO VERSION 0.0.1 LANGUAGES C)
 
-add_library(openpnio STATIC src/frame.c src/dcp.c src/dcp_response.c src/dcp_device.c src/dcp_set.c src/dcp_get.c)
+add_library(openpnio STATIC src/frame.c src/dcp.c src/dcp_response.c src/dcp_device.c src/dcp_set.c src/dcp_get.c src/dcp_identity_fields.c)
 target_include_directories(openpnio PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include)
 target_compile_features(openpnio PUBLIC c_std_11)
 
