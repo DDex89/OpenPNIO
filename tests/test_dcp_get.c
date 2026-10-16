@@ -8,7 +8,7 @@
 static const uint8_t mac[6] = {2,0,0,0,0,1};
 static const openpnio_dcp_identity_t id = {
     .station_name="openpnio-test", .station_type="OpenPNIO Linux prototype",
-    .vendor_id=0x1234, .device_id=0x5678, .device_instance=0x01020304,
+    .vendor_id=0x1234, .device_id=0x5678, .device_instance=0x1234,
     .ip={192,168,1,8},.netmask={255,255,255,0},.gateway={192,168,1,1}
 };
 static size_t get_request(uint8_t *p, uint8_t option, uint8_t suboption)
@@ -49,7 +49,7 @@ int main(void)
     const uint8_t ip[12]={192,168,1,8,255,255,255,0,192,168,1,1};
     const uint8_t ids[4]={0x12,0x34,0x56,0x78};
     const uint8_t role[2]={1,0};
-    const uint8_t instance[4]={1,2,3,4};
+    const uint8_t instance[2]={0x12,0x34};
     const uint8_t options[16]={1,1,1,2,2,1,2,2,2,3,2,4,2,5,2,7};
     size_t n,w=0;
     n=get_request(request,2,2);
