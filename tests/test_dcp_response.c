@@ -14,7 +14,7 @@ int main(void)
     };
     const openpnio_dcp_identity_t id={
         .station_name="openpnio",.station_type="OpenPNIO",
-        .vendor_id=0x1234,.device_id=0x5678,.device_instance=0x01020304,
+        .vendor_id=0x1234,.device_id=0x5678,.device_instance=0x1234,
         .ip={192,168,1,42},.netmask={255,255,255,0},.gateway={192,168,1,1}
     };
     uint8_t buf[512];
@@ -43,8 +43,8 @@ int main(void)
             assert(b.option==2 && b.suboption==4 && b.data_length==4);
             assert(b.data[2]==1 && b.data[3]==0);
         } else if (count==5) {
-            assert(b.option==2 && b.suboption==7 && b.data_length==6);
-            assert(memcmp(b.data+2,"\x01\x02\x03\x04",4)==0);
+            assert(b.option==2 && b.suboption==7 && b.data_length==4);
+            assert(b.data[2]==0x12 && b.data[3]==0x34);
         } else if (count==6) {
             assert(b.option==1 && b.suboption==2 && b.data_length==14);
             assert(b.data[0]==0 && b.data[1]==1);
