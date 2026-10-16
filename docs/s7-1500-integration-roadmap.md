@@ -12,15 +12,15 @@ Target: Siemens **S7-1500 CPU 1511T-1 PN**, initially a **fixed 8DI + 8DO** lab 
 - [ ] Fix a lab-only DAP/device identity and module/submodule catalog. VendorID/DeviceID remain placeholders **0x0000/0x0000** and need an appropriate, honest identity policy; do not use a real manufacturer's VendorID without authorization.
 - [ ] Define fixed application process image: one byte of DI, one byte of DO, explicit slot/subslot and module IDs, and a known safe DO state when disconnected.
 - [ ] Produce a **minimal, internally consistent GSDML** describing that fixed configuration. TIA Portal acceptance of the XML, hardware catalog entry and actual runtime identity must match.
-- [ ] Harden DCP: persistence and BlockQualifier semantics for station name; required DCP metadata and selectors (e.g. DeviceOptions) and any station reset/signal needed for the particular commissioning path. Keep the current safe IP lock until the explicit opt-in/backend and recovery tests in [ADR 0008](decisions/0008-dcp-ip-assignment-policy.md).
+- [x] Implement qualifier-aware temporary/permanent station-name Set, DeviceOptions, DeviceInstance, correct DeviceRole/IPBlockInfo and additional Identify filters; [ ] verify persistence across restart on real Pi and required reset/signal/other commissioning selectors with TIA Portal. Keep the current safe IP lock until the explicit opt-in/backend and recovery tests in [ADR 0008](decisions/0008-dcp-ip-assignment-policy.md).
 - [ ] **Early PLC smoke test**: check whether TIA Portal's *Accessible devices* sees the Pi and whether it can assign a station name. This is an exploratory compatibility test, **not** evidence of IO cyclic communication.
 
 ## Gate 1 — Portable process image / IO model
 
-- [ ] Create platform-neutral `openpnio_device_model`: DeviceAccessPoint, slot/subslot descriptors, module/submodule identifiers, input/output lengths, and buffer callbacks.
-- [ ] Implement fixed **8DI (1 byte)** + **8DO (1 byte)** synthetic IO, independent of GPIO pinout.
+- [x] Introduce an initial platform-neutral model with a provisional DAP, slot/subslot descriptors, module/submodule identifiers and process byte lengths. See [virtual IO model](virtual-io-model.md). **IDs and DAP layout still need standards/GSDML validation.**
+- [x] Implement fixed **8DI (1 byte)** + **8DO (1 byte)** synthetic in-memory IO, independent of GPIO pinout (no RTC1 integration yet).
 - [ ] Explicit ownership and validation of configured modules/submodules and their expected data lengths; reject an unsupported projected configuration with a useful protocol status.
-- [ ] Define valid/invalid IO provider state; default outputs off on startup and controller loss.
+- [x] Initialize virtual DO to zero and clear it on explicit transition to non-operational state. [ ] Wire that transition to future CM/AR watchdog, controller STOP and RT provider-status semantics.
 
 ## Gate 2 — Controller connection (acyclic communications)
 
