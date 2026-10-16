@@ -51,7 +51,7 @@ int main(void)
     size_t n,w=0;
     n=get_request(request,2,2);
     assert(openpnio_dcp_handle_get(request,n,mac,&id,reply,sizeof reply,&w)==1);
-    check_value(reply,w,2,2,(const uint8_t *)"openpnio-test",12);
+    check_value(reply,w,2,2,(const uint8_t *)"openpnio-test",13);
     n=get_request(request,1,2);
     assert(openpnio_dcp_handle_get(request,n,mac,&id,reply,sizeof reply,&w)==1);
     check_value(reply,w,1,2,ip,12);
