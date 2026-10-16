@@ -37,6 +37,22 @@ class DcpClientTests(unittest.TestCase):
         self.assertEqual(data[18:31], b"openpnio-test")
         self.assertEqual(data[-1:], b"\x00")
 
+    def test_permanent_name_qualifier(self):
+        data = dcp.make_set(XID, 2, 2, b"openpnio-lab", qualifier=1)
+        self.assertEqual(data[16:18], b"\x00\x01")
+        self.assertEqual(data[12:14], b"\x02\x02")
+
+    def test_identity_option_pairs_role_and_instance(self):
+        options = bytes((1,1,1,2,2,1,2,2,2,3,2,4,2,5,2,7))
+        blocks = (bytes.fromhex("020500120000") + options +
+                  bytes.fromhex("0204000400000100") +
+                  bytes.fromhex("0207000400001234"))
+        result = dcp.parse_ethernet_response(ethernet_reply(5,0xFEFF,blocks),
+                                             XID,5,0xFEFF)
+        self.assertEqual(dcp.find_value(result[1],2,5),options)
+        self.assertEqual(dcp.find_value(result[1],2,4),b"\x01\x00")
+        self.assertEqual(dcp.find_value(result[1],2,7),b"\x12\x34")
+
     def test_identify_reply_parse(self):
         b = bytes.fromhex("0202000f0000") + b"openpnio-test" + b"\x00"
         result = dcp.parse_ethernet_response(ethernet_reply(5, 0xFEFF, b), XID, 5, 0xFEFF)
