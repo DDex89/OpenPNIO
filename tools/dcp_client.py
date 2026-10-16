@@ -68,7 +68,7 @@ def parse_blocks(blocks):
                 raise ValueError("DCP response block lacks BlockInfo")
             info = int.from_bytes(blocks[start:start+2], "big")
             value = blocks[start+2:end]
-        decoded.append((option, suboption, info, value)
+        decoded.append((option, suboption, info, value))
         pos = end + (size & 1)
     return decoded
 
