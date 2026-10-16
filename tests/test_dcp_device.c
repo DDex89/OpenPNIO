@@ -62,8 +62,21 @@ int main(void)
     n=request(req,"another");
     assert(openpnio_dcp_handle_identify(req,n,mac,&id,reply,sizeof reply,&out)==0);
     assert(out==0);
+    n=request(req,"OpenPNIO");
+    req[27]=1; /* TypeOfStation selector */
+    assert(openpnio_dcp_handle_identify(req,n,mac,&id,reply,sizeof reply,&out)==1);
+    req[30]='X';
+    assert(openpnio_dcp_handle_identify(req,n,mac,&id,reply,sizeof reply,&out)==0);
+    n=request(req,NULL);
+    req[24]=0;req[25]=8;req[26]=2;req[27]=3;
+    req[28]=0;req[29]=4;
+    req[30]=0x12;req[31]=0x34;req[32]=0x56;req[33]=0x78;
+    n=34;
+    assert(openpnio_dcp_handle_identify(req,n,mac,&id,reply,sizeof reply,&out)==1);
+    req[33]=0x79;
+    assert(openpnio_dcp_handle_identify(req,n,mac,&id,reply,sizeof reply,&out)==0);
     n=request(req,"openpnio");
-    req[27]=3;
+    req[27]=3; /* Unsupported/mismatched DeviceID length */
     assert(openpnio_dcp_handle_identify(req,n,mac,&id,reply,sizeof reply,&out)==0);
     n=request(req,"openpnio");
     assert(openpnio_dcp_handle_identify(req,n-1,mac,&id,reply,sizeof reply,&out)==-1);
