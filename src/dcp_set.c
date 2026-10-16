@@ -21,10 +21,10 @@ static int valid_name(const uint8_t *p,size_t n)
     }
     return 1;
 }
-int openpnio_dcp_handle_set(const uint8_t *request,size_t request_size,
-                           const uint8_t device_mac[6],
-                           openpnio_station_name_setter_t setter,void *context,
-                           uint8_t *response,size_t capacity,size_t *written)
+int openpnio_dcp_handle_set_ex(const uint8_t *request,size_t request_size,
+                              const uint8_t device_mac[6],
+                              const openpnio_dcp_set_handlers_t *handlers,
+                              uint8_t *response,size_t capacity,size_t *written)
 {
     openpnio_frame_t frame;
     openpnio_dcp_header_t hdr;
@@ -58,6 +58,20 @@ int openpnio_dcp_handle_set(const uint8_t *request,size_t request_size,
     openpnio_dcp_cursor_init(&cursor,hdr.blocks,hdr.blocks_length);
     while((next=openpnio_dcp_next_block(&cursor,&block))>0) {
         uint8_t status=OPENPNIO_SET_OPTION_UNSUPPORTED;
+        if(block.option==1) {
+            status=OPENPNIO_SET_SUBOPTION_UNSUPPORTED;
+            if(block.suboption==2) {
+                status=OPENPNIO_SET_NOT_POSSIBLE;
+                if(block.data_length==14 && handlers && handlers->set_ip_suite) {
+                    const uint8_t *ip=block.data+2;
+                    const uint8_t *mask=block.data+6;
+                    const uint8_t *gateway=block.data+10;
+                    uint16_t qualifier=be16(block.data);
+                    if(handlers->set_ip_suite(handlers->context,ip,mask,gateway,qualifier)==0)
+                        status=OPENPNIO_SET_OK;
+                }
+            }
+        }
         if(block.option==2) {
             status=OPENPNIO_SET_SUBOPTION_UNSUPPORTED;
             if(block.suboption==2) {
@@ -65,11 +79,11 @@ int openpnio_dcp_handle_set(const uint8_t *request,size_t request_size,
                 size_t n=block.data_length-2;
                 uint16_t qualifier=be16(block.data);
                 status=OPENPNIO_SET_NOT_POSSIBLE;
-                if(setter && valid_name(name,n)) {
+                if(handlers && handlers->set_station_name && valid_name(name,n)) {
                     char temp[241];
                     memcpy(temp,name,n);
                     temp[n]='\0';
-                    if(setter(context,temp,n,qualifier)==0) status=OPENPNIO_SET_OK;
+                    if(handlers->set_station_name(handlers->context,temp,n,qualifier)==0) status=OPENPNIO_SET_OK;
                 }
             }
         }
@@ -84,4 +98,14 @@ int openpnio_dcp_handle_set(const uint8_t *request,size_t request_size,
     put16(response+24,(uint16_t)(pos-26));
     *written=pos;
     return 1;
+}
+
+int openpnio_dcp_handle_set(const uint8_t *request,size_t request_size,
+                           const uint8_t device_mac[6],
+                           openpnio_station_name_setter_t setter,void *context,
+                           uint8_t *response,size_t capacity,size_t *written)
+{
+    const openpnio_dcp_set_handlers_t handlers={setter,0,context};
+    return openpnio_dcp_handle_set_ex(request,request_size,device_mac,
+                                     &handlers,response,capacity,written);
 }
