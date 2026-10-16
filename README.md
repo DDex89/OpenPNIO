@@ -34,15 +34,22 @@ The setup script builds with one parallel job to conserve Pi 1 RAM and runs CTes
 sudo ./build/openpnio_dcp_probe eth0
 ```
 
-## Hardware milestone
+## Hardware milestone: DCP validated on Raspberry Pi 1 (2026-10-17)
 
-On 2026-10-17, a Raspberry Pi 1 Model B Rev 2 (ARMv6) running Linux successfully answered a real Windows/Npcap DCP Identify All multicast request; the Python client discovered `openpnio-test`. The exchange was recorded by tcpdump with matching transaction ID. See [capture notes](docs/linux-dcp-probe.md). DCP Get and Set have **not yet been verified on hardware**.
+**Real Ethernet laboratory testing on ARMv6 has verified DCP Identify All, Get IP, Get Name, Set Name, state readback and explicit refusal of an unauthorized IP change.** A follow-up Get IP confirmed that the interface still had its original IP/mask/gateway. Pi 1 CTest: **7/7 passed**; GitHub Actions also passed C and offline Python regression suites. The Set Name test used RAM only; persistence and accepting changed IP were **not** hardware-validated.
+
+Read the [hardware validation report](docs/hardware-validation-2026-10-17.md), the [S7-1500 interoperability roadmap](docs/s7-1500-integration-roadmap.md), and the [proposed IP assignment safety policy](docs/decisions/0008-dcp-ip-assignment-policy.md).
+
+**This is a DCP discovery/configuration milestone, not a working PROFINET IO Device.** GSDML, RPC/CM, AR establishment, cyclic RTC1 I/O and Siemens interoperability remain future work.
 
 ## Documentation
 
 - [Architecture](docs/architecture.md)
 - [Reference audit](docs/reference-projects.md)
 - [Linux DCP responder and Windows Python client](docs/linux-dcp-probe.md)
+- [DCP Pi 1 hardware validation results](docs/hardware-validation-2026-10-17.md)
+- [Siemens S7-1500 interoperability roadmap](docs/s7-1500-integration-roadmap.md)
+- [ADR 0008: Proposed guarded DCP IP assignment](docs/decisions/0008-dcp-ip-assignment-policy.md)
 - [Modular lab development kit concept](docs/lab-development-kit.md)
 - [Raspberry Pi 1 setup](docs/raspberry-pi-1.md)
 - [Architecture decisions](docs/decisions/0001-ethernet-framing.md)
