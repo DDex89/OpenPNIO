@@ -8,11 +8,12 @@ The long-term goal is a platform-independent PROFINET IO Device stack for Linux 
 
 - Ethernet/PROFINET frame parsing (EtherType 0x8892, single VLAN tag)
 - DCP header and TLV decoding
-- DCP Identify response encoding and request dispatch (limited selectors)
-- DCP Get for station name/type, device identity/role, and IP suite
-- DCP Set station name and IP suite with application callbacks (experimental)
+- DCP Identify with standard device metadata (DeviceOptions, DeviceInstance, DeviceRole, live IPBlockInfo); Identify All plus name/type/ID selectors
+- DCP Get for MAC, IP suite, name/type, device identity/role/options/instance
+- DCP Set station name with qualifier-aware temporary/permanent storage and IP suite with safe callbacks (experimental)
 - Linux AF_PACKET DCP Identify/Get/guarded Set responder: reports live IPv4 parameters, optional station-name persistence, never changes Linux network IP
 - Windows/Linux Scapy DCP bench client for Identify, Get and explicitly confirmed Set
+- Portable virtual **8DI + 8DO** process model (one byte each, slot/subslot validation, safe DO=0 on disconnect); **not yet connected to PROFINET AR/RTC1**
 - CMake/CTest C tests, offline Python framing tests, and GitHub Actions CI
 
 ## Raspberry Pi 1 quick start (headless)
@@ -49,6 +50,7 @@ Read the [hardware validation report](docs/hardware-validation-2026-10-17.md), t
 - [Linux DCP responder and Windows Python client](docs/linux-dcp-probe.md)
 - [DCP Pi 1 hardware validation results](docs/hardware-validation-2026-10-17.md)
 - [Siemens S7-1500 interoperability roadmap](docs/s7-1500-integration-roadmap.md)
+- [Portable virtual 8DI/8DO module catalog](docs/virtual-io-model.md)
 - [ADR 0008: Proposed guarded DCP IP assignment](docs/decisions/0008-dcp-ip-assignment-policy.md)
 - [Modular lab development kit concept](docs/lab-development-kit.md)
 - [Raspberry Pi 1 setup](docs/raspberry-pi-1.md)
