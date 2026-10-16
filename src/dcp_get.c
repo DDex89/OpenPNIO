@@ -17,8 +17,10 @@ static int append(uint8_t *out, size_t cap, size_t *pos, uint8_t option,
                   uint8_t suboption, uint16_t info, const uint8_t *value, size_t len)
 {
     size_t pad = len & 1u;
-    if (!out || !pos || len > 65533u || *pos > cap ||
-        6u + len + pad > cap - *pos || *pos - 26u > 65535u - (6u + len + pad))
+    size_t bytes = 6u + len + pad;
+    if (!out || !pos || len > 65533u || *pos < 26u || *pos > cap ||
+        bytes > cap - *pos || bytes > 65535u ||
+        *pos - 26u > 65535u - bytes)
         return -1;
     out[*pos] = option;
     out[*pos + 1] = suboption;
