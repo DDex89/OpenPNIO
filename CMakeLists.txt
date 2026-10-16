@@ -5,6 +5,12 @@ add_library(openpnio STATIC src/frame.c src/dcp.c src/dcp_response.c src/dcp_dev
 target_include_directories(openpnio PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include)
 target_compile_features(openpnio PUBLIC c_std_11)
 
+if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
+    add_executable(openpnio_dcp_probe platform/linux/dcp_probe.c)
+    target_link_libraries(openpnio_dcp_probe PRIVATE openpnio)
+    target_compile_definitions(openpnio_dcp_probe PRIVATE _DEFAULT_SOURCE)
+endif()
+
 include(CTest)
 if(BUILD_TESTING)
     add_executable(test_frame tests/test_frame.c)
