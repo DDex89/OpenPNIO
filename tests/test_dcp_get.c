@@ -8,7 +8,7 @@
 static const uint8_t mac[6] = {2,0,0,0,0,1};
 static const openpnio_dcp_identity_t id = {
     .station_name="openpnio-test", .station_type="OpenPNIO Linux prototype",
-    .vendor_id=0x1234, .device_id=0x5678,
+    .vendor_id=0x1234, .device_id=0x5678, .device_instance=0x01020304,
     .ip={192,168,1,8},.netmask={255,255,255,0},.gateway={192,168,1,1}
 };
 static size_t get_request(uint8_t *p, uint8_t option, uint8_t suboption)
@@ -48,6 +48,9 @@ int main(void)
     uint8_t request[60], reply[512], saved[512];
     const uint8_t ip[12]={192,168,1,8,255,255,255,0,192,168,1,1};
     const uint8_t ids[4]={0x12,0x34,0x56,0x78};
+    const uint8_t role[2]={1,0};
+    const uint8_t instance[4]={1,2,3,4};
+    const uint8_t options[16]={1,1,1,2,2,1,2,2,2,3,2,4,2,5,2,7};
     size_t n,w=0;
     n=get_request(request,2,2);
     assert(openpnio_dcp_handle_get(request,n,mac,&id,reply,sizeof reply,&w)==1);
@@ -64,7 +67,16 @@ int main(void)
     check_value(reply,w,2,1,(const uint8_t *)"OpenPNIO Linux prototype",24);
     n=get_request(request,2,4);
     assert(openpnio_dcp_handle_get(request,n,mac,&id,reply,sizeof reply,&w)==1);
-    assert(reply[32]==1); /* IO Device */
+    check_value(reply,w,2,4,role,sizeof role);
+    n=get_request(request,1,1);
+    assert(openpnio_dcp_handle_get(request,n,mac,&id,reply,sizeof reply,&w)==1);
+    check_value(reply,w,1,1,mac,sizeof mac);
+    n=get_request(request,2,5);
+    assert(openpnio_dcp_handle_get(request,n,mac,&id,reply,sizeof reply,&w)==1);
+    check_value(reply,w,2,5,options,sizeof options);
+    n=get_request(request,2,7);
+    assert(openpnio_dcp_handle_get(request,n,mac,&id,reply,sizeof reply,&w)==1);
+    check_value(reply,w,2,7,instance,sizeof instance);
     n=get_request(request,2,2);
     request[27]=9;
     assert(openpnio_dcp_handle_get(request,n,mac,&id,reply,sizeof reply,&w)==0);
