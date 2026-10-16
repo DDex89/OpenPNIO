@@ -10,7 +10,7 @@ typedef struct openpnio_dcp_identity {
     const char *station_type;
     uint16_t vendor_id;
     uint16_t device_id;
-    uint32_t device_instance; /* DCP DeviceInstance (high/low word); zero for lab prototype. */
+    uint16_t device_instance; /* DCP DeviceInstance: high and low byte; zero for lab prototype. */
     uint8_t ip[4];
     uint8_t netmask[4];
     uint8_t gateway[4];
