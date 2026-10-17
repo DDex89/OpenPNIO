@@ -26,6 +26,22 @@ sudo ./build/openpnio_dcp_probe eth0
 
 Run **only on an isolated laboratory Ethernet network**, not on a production or industrial segment. Requires `CAP_NET_RAW` (typically `sudo`). Ctrl+C stops the responder.
 
+### Optional basic LLDP experiment (NEW — not yet hardware validated)
+
+```sh
+sudo ./build/openpnio_dcp_probe eth0 --allow-set-name --station-file /var/tmp/openpnio-station-name --lldp
+```
+
+`--lldp` enables a basic IEEE 802.1AB advertisement every ~5 seconds on the same Ethernet port, using the current PROFINET station name for locally assigned chassis/port text. It transmits EtherType `0x88cc` with mandatory Chassis ID, Port ID, TTL, optional SystemName and End TLV. It does **not** include the full PROFINET organization-specific TLVs, neighbor database, topology diagnostics or SNMP. Running this option on an isolated test network is the first opportunity to capture and validate the actual LLDP bytes on Pi. This is **not** a conformance claim.
+
+To capture only non-SSH network data with a unique file (no overwrite permission collision):
+
+```sh
+sudo tcpdump -i eth0 -nn -e -s 0 -w "/tmp/openpnio-batch-$(date +%s).pcap" 'not tcp port 22'
+```
+
+See the [one-session Siemens/Pi batch protocol plan](siemens-batch-test-plan.md).
+
 The responder reads **IPv4 address, netmask and default gateway from Linux** for the selected interface (e.g. `eth0`). DCP Identify and DCP Get report these current values; Linux hostname is independent of PROFINET NameOfStation. Vendor ID / Device ID are still zero placeholders. No code changes the interface IP or routing table.
 
 ### Name Set, disabled by default
@@ -75,6 +91,8 @@ py "$env:USERPROFILE\dcp_client.py" --iface $iface --get-ip $mac
 py "$env:USERPROFILE\dcp_client.py" --iface $iface --get-options $mac
 py "$env:USERPROFILE\dcp_client.py" --iface $iface --get-id $mac
 py "$env:USERPROFILE\dcp_client.py" --iface $iface --get-instance $mac
+# One consolidated read-only Identify + Get suite:
+py "$env:USERPROFILE\dcp_client.py" --iface $iface --batch-read $mac --timeout 1.5
 ```
 
 **Optional state-changing test, only on an isolated test network and after starting the responder with `--allow-set-name`:**
@@ -110,6 +128,6 @@ The `0x8892` EtherType may be shown as `Unknown` by tcpdump; this does not indic
 - Initial implementation supports only untagged outgoing replies. VLAN-tagged reception depends on Ethernet/socket handling and is not verified.
 - Supported DCP Get fields: MAC address (01/01), IP suite (01/02), Type (02/01), Name (02/02), DeviceID (02/03), Role (02/04), DeviceOptions (02/05) and DeviceInstance (02/07). Other selectors receive no reply.
 - Identify emits 7 corresponding metadata blocks (excluding the redundant Get-MAC block) and supports filter selectors by Name, Type and DeviceID plus FF/FF Identify All. VendorID/DeviceID remain clearly identified lab placeholders; this does not establish certified PROFINET identity.
-- DCP response-delay scheduling, multiple network-interface lifecycles, GSDML and PROFINET IO-Controller association are not implemented.
+- DCP response-delay scheduling, multiple network-interface lifecycles, validated GSDML import and PROFINET IO-Controller association are not implemented. The new DCE/RPC and RTC1 codecs are offline building blocks, **not** a live RPC/CM server or cyclic PNIO connection.
 - A device's PROFINET station name is **not** its Linux hostname.
 - No PLC interoperability or PROFINET conformance has been established.
