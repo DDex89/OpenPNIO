@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.16)
 project(OpenPNIO VERSION 0.0.1 LANGUAGES C)
 
-add_library(openpnio STATIC src/frame.c src/dcp.c src/dcp_response.c src/dcp_device.c src/dcp_set.c src/dcp_get.c src/dcp_identity_fields.c src/device_model.c src/lldp.c src/rtc1.c src/rpc_cl.c)
+add_library(openpnio STATIC src/frame.c src/dcp.c src/dcp_response.c src/dcp_device.c src/dcp_set.c src/dcp_get.c src/dcp_identity_fields.c src/device_model.c src/lldp.c src/rtc1.c src/rpc_cl.c src/ar_session.c)
 target_include_directories(openpnio PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include)
 target_compile_features(openpnio PUBLIC c_std_11)
 
@@ -32,6 +32,10 @@ if(BUILD_TESTING)
     add_executable(test_dcp_get tests/test_dcp_get.c)
     target_link_libraries(test_dcp_get PRIVATE openpnio)
     add_test(NAME dcp_get COMMAND test_dcp_get)
+
+    add_executable(test_ar_session tests/test_ar_session.c)
+    target_link_libraries(test_ar_session PRIVATE openpnio)
+    add_test(NAME ar_watchdog_simulation COMMAND test_ar_session)
 
     add_executable(test_lldp tests/test_lldp.c)
     target_link_libraries(test_lldp PRIVATE openpnio)
