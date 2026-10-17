@@ -26,7 +26,25 @@ export LAB_DEVICE_ID='REPLACE_WITH_HEX_DEVICE_ID'
 
 The placeholders must be replaced with actual numeric values (`0x...`), not left literal. Shell expansion passes them to the executable; nothing in the application stores those values on disk.
 
-With the previous responder stopped using Ctrl+C, run **on the isolated Pi lab segment**:
+Use the **same shell** that contains the two `export` commands. First generate a local XML for comparison with the runtime, then launch the responder (which blocks the terminal). If using two SSH shells instead, export the two ID values independently in **both** shells.
+
+**First generate the XML outside the repository** (no network traffic is sent):
+
+```sh
+cd ~/OpenPNIO
+python3 tools/generate_gsdml.py \
+    --vendor-id "$LAB_VENDOR_ID" \
+    --device-id "$LAB_DEVICE_ID" \
+    --lab-unregistered-identity \
+    --confirm-isolated-lab \
+    --vendor-name 'OpenPNIO experimental' \
+    --dns-name testnode \
+    --output /tmp/GSDML-V2.32-OpenPNIO-LOCAL.lab.xml
+```
+
+The generator only verifies XML well-formedness and internal manifest consistency; this is **not yet official GSDML schema validation**.
+
+**Then start the DCP responder**, only on a physically isolated Pi lab segment:
 
 ```sh
 cd ~/OpenPNIO
@@ -41,18 +59,10 @@ sudo ./build/openpnio_dcp_probe eth0 \
 
 It should report `Station: testnode`, actual eth0 IP, and an explicit **LAB-ONLY DCP IDENTITY** warning with the selected values. Stop and restart the process **without** these flags to restore `VendorID=0x0000` and `DeviceID=0x0000`.
 
-Separately, in another Pi shell, generate a **local** experimental GSDML candidate using the exact same ID pair, **never inside GitHub**:
+To copy the local XML from the Pi onto the Windows TIA Portal machine, use Windows PowerShell:
 
-```sh
-cd ~/OpenPNIO
-python3 tools/generate_gsdml.py \
-    --vendor-id "$LAB_VENDOR_ID" \
-    --device-id "$LAB_DEVICE_ID" \
-    --lab-unregistered-identity \
-    --confirm-isolated-lab \
-    --vendor-name 'OpenPNIO experimental' \
-    --dns-name testnode \
-    --output /tmp/GSDML-V2.32-OpenPNIO-LOCAL.lab.xml
+```powershell
+scp su@192.168.1.8:/tmp/GSDML-V2.32-OpenPNIO-LOCAL.lab.xml "$env:USERPROFILE\Downloads\"
 ```
 
 Confirm the runtime DCP DeviceID field and the XML `DeviceIdentity` agree. Do not mistake an XML file's successful generation for schema validation, TIA import, AR negotiation or real I/O exchange.
