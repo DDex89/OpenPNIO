@@ -2,10 +2,13 @@
 """Generate an *experimental* GSDML-V2.32 device description from the OpenPNIO
 fixed lab model. This does NOT create a working PNIO IO Device.
 
-A genuine PI-assigned VendorID and chosen DeviceID are required before the
-user can prepare an import candidate. --preview makes a structural-only
-document with deliberately UNASSIGNED identity 0x0000; don't deploy it.
-GSDML schema validation and TIA Portal V19 import remain separate gates.
+Production use requires an actual PI-assigned VendorID. --preview generates
+only unassigned identity 0x0000 and is NOT an importable product.
+An explicitly acknowledged --lab-unregistered-identity mode may generate a
+temporary test-only XML outside the repository, with caller-supplied values.
+No vendor identity is included in this repository. This does NOT assert
+ownership or PROFINET certification. Official XSD/TIA import validation
+and the actual CM/AR stack remain separate requirements.
 """
 import argparse
 import json
@@ -163,22 +166,39 @@ def main(argv=None):
     parser.add_argument("--preview", action="store_true",
                         help="structural preview with 0x0000 identity; NOT usable for a real device")
     parser.add_argument("--confirm-owned-vendor-id", action="store_true",
-                        help="affirm that the supplied VendorID was assigned by PI to your organization")
+                        help="affirm that PI assigned the supplied VendorID to your organization")
+    parser.add_argument("--lab-unregistered-identity", action="store_true",
+                        help="permit caller-supplied, NOT OWNED identity in local experimental XML only")
+    parser.add_argument("--confirm-isolated-lab", action="store_true",
+                        help="acknowledge no production/shared industrial Ethernet connections")
     parser.add_argument("--output", type=Path, required=True)
     args = parser.parse_args(argv)
     if args.preview:
-        if args.vendor_id is not None or args.device_id is not None:
-            parser.error("--preview uses deliberately unassigned 0x0000/0x0000 only")
+        if (args.vendor_id is not None or args.device_id is not None or
+                args.confirm_owned_vendor_id or args.lab_unregistered_identity or
+                args.confirm_isolated_lab):
+            parser.error("--preview cannot be combined with identity selection")
         vendor, device = 0, 0
         print("WARNING: PREVIEW ONLY: identity 0x0000/0x0000 is not assigned.",
               file=sys.stderr)
     else:
-        if not args.confirm_owned_vendor_id:
-            parser.error("real candidates require --confirm-owned-vendor-id")
         vendor, device = args.vendor_id, args.device_id
         if vendor is None or device is None or not (1 <= vendor < 0xFFFF and
                                                     1 <= device <= 0xFFFF):
             parser.error("valid --vendor-id and --device-id required")
+        if args.lab_unregistered_identity:
+            if args.confirm_owned_vendor_id or not args.confirm_isolated_lab:
+                parser.error("unregistered lab identity requires --confirm-isolated-lab"
+                             " and cannot assert VendorID ownership")
+            path = args.output.resolve()
+            if path == ROOT or ROOT in path.parents:
+                parser.error("unregistered lab XML must be generated outside the repository")
+            print("WARNING: UNREGISTERED LAB TEST IDENTITY, NOT OWNED OR CERTIFIED."
+                  " Do not use on production/shared industrial networks.",
+                  file=sys.stderr)
+        elif not args.confirm_owned_vendor_id or args.confirm_isolated_lab:
+            parser.error("production identity requires --confirm-owned-vendor-id;"
+                         " use isolated lab flags for unregistered test identity")
     try:
         tree = ET.ElementTree(build_gsdml(load_catalog(),vendor,device,
                                           args.vendor_name,args.dns_name))
