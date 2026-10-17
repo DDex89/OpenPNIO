@@ -155,6 +155,8 @@ def main():
     group.add_argument("--get-id", metavar="MAC", help="DCP Get vendor/device ID")
     group.add_argument("--get-options", metavar="MAC", help="DCP Get supported option pairs")
     group.add_argument("--get-instance", metavar="MAC", help="DCP Get device instance")
+    group.add_argument("--batch-read", metavar="MAC",
+                       help="read-only suite: Identify + Get Name/IP/ID/Options/Instance")
     group.add_argument("--set-name", nargs=2, metavar=("MAC", "NAME"),
                        help="DCP Set station name (opt-in)")
     group.add_argument("--set-ip", nargs=4, metavar=("MAC", "IP", "MASK", "GATEWAY"),
@@ -174,6 +176,47 @@ def main():
         p.error("--timeout must be between 0.1 and 30 seconds")
     if args.permanent_name and not args.set_name:
         p.error("--permanent-name requires --set-name and --confirm-set")
+    if args.batch_read:
+        # One user command exercises all implemented DCP read selectors.
+        # No Set, reset or interface reconfiguration can happen here.
+        try:
+            mac_bytes(args.batch_read)
+        except ValueError as exc:
+            p.error(str(exc))
+        mac = args.batch_read.lower()
+        tasks = [
+            ("Identify All", None),
+            ("Get Name", (2, 2)),
+            ("Get IP", (1, 2)),
+            ("Get ID", (2, 3)),
+            ("Get Options", (2, 5)),
+            ("Get Instance", (2, 7)),
+        ]
+        passed = 0
+        for label, requested_field in tasks:
+            transaction = secrets.randbits(32)
+            if requested_field is None:
+                destination = DCP_MULTICAST
+                request = make_identify(transaction)
+                svc, response_id = 5, 0xFEFF
+            else:
+                destination = mac
+                request = make_get(transaction, *requested_field)
+                svc, response_id = 3, 0xFEFD
+            replies = execute(args.iface, destination, request,
+                              transaction, svc, response_id, args.timeout)
+            matching = [(sender, blocks) for sender, blocks in replies if sender == mac]
+            valid = any((requested_field is None or
+                         find_value(blocks, *requested_field) is not None)
+                        for _sender, blocks in matching)
+            print(f"{label}: {'PASS' if valid else 'FAIL'}"
+                  f" ({len(matching)} reply/replies from {mac})")
+            if valid:
+                passed += 1
+        print(f"Batch DCP read suite: {passed}/{len(tasks)} passed")
+        if passed != len(tasks):
+            raise SystemExit(1)
+        return
     xid = secrets.randbits(32)
     dst = DCP_MULTICAST
     response_frame = 0xFEFF
