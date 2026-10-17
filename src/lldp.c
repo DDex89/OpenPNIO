@@ -77,7 +77,8 @@ int openpnio_lldp_parse(const uint8_t *p,size_t size,
             ended=1;
             break;
         }
-        if (expect<=3 && type!=expect) return -1;
+        if ((expect<=3 && type!=expect) ||
+            (expect==4 && type>=1 && type<=3)) return -1;
         if (type==1) {
             if (n<2 || data[0]>7 || data[0]==0) return -1;
             out->chassis_id=data+1;out->chassis_id_length=n-1;
@@ -90,8 +91,6 @@ int openpnio_lldp_parse(const uint8_t *p,size_t size,
             if (n!=2) return -1;
             out->ttl_seconds=read16(data);
             expect=4;
-        } else if (type==1 || type==2 || type==3) {
-            return -1;
         }
         off+=n;
     }
