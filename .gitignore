@@ -3,3 +3,11 @@ cmake-build-*/
 __pycache__/
 *.pyc
 .DS_Store
+
+# Local-only identities and generated laboratory device descriptions:
+/local/
+/.lab-id/
+*.lab.xml
+*.local.xml
+GSDML-*LAB*.xml
+*.lab.env
