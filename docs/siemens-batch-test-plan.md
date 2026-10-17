@@ -116,6 +116,18 @@ The latest Siemens install log again says **GSD file was not installed**, but th
 
 These changes are guarded by offline tests; **TIA re-import and official XSD validation are still pending**. The next local test XML filename is `GSDML-V2.32-OpenPNIO-Lab-20261017.xml` (user-supplied test IDs at runtime only), generated and copied separately from the ongoing live DCP/LLDP responder. The earlier filename `GSDML-V2.32-OpenPNIO-LOCAL.lab.xml` should no longer be used.
 
+### TIA Portal V19 GSDML import, catalog, controller assignment and hardware compile (2026-10-17)
+
+**Hardware catalog installation: PASS**, after generating `GSDML-V2.32-OpenPNIO-Lab-20261017.xml` in a clean Windows source folder (avoid the legacy `LOCAL.lab.xml` name). Siemens listed the experimental OpenPNIO DAP under `Other field devices → PROFINET IO → I/O → [manufacturer based on temporary lab VendorID] → OpenPNIO Lab`, with order number `OpenPNIO-8DI8DO-LAB`, firmware `V0.0.1`, proper description, and two selectable modules: `8 virtual digital inputs (1 byte)`, `8 virtual digital outputs (1 byte)`.
+
+**Engineering/project configuration: PASS** for TIA Portal V19 offline. Imported OpenPNIO as `testnode` with module slots **1 (8DI, `%IB0`)** and **2 (8DO, `%QB0`)**, linked to an **offline** S7-1500 `CPU 1511T-1 PN` controller in `PLC_1.PROFINET IO-System (100)`. This demonstrates catalog compatibility, module descriptors, controller selection and process-image address assignment only; no physical PLC, AR connection or RTC1 cyclic exchange.
+
+**First PLC_1 / hardware compilation: 3 errors, 2 warnings (NOT PASS)**. The three errors were *solely* in the imported GSD device interface and concerned `IOConfigData` maximum transport sizes: **input 6 B > declared 1 B; output 6 B > declared 1 B; combined 12 B > declared 2 B**. The XML generator formerly used only the process-image payload (1 input byte, 1 output byte), omitting the size of the IOCR producer/consumer status and user-data qualifiers. Per PROFINET specification, `MaxInputLength`/`MaxOutputLength` apply to the total I/O communication relation C-SDU, **not just application bytes**. The generator now declares `MaxInputLength=6`, `MaxOutputLength=6`, `MaxDataLength=12`, while each module still transfers **1 byte of user data**. A Python regression checks both sets of sizes.
+
+The **two warnings**, unrelated to these errors, were: (1) device replacement without exchangeable medium requires a configured topology; (2) S7-1500 CPU display has no password protection. Do not enable unsupported network/device features just to silence warnings. Project default addresses `192.168.0.1` for the controller and `192.168.0.2` for `testnode` differ from the Pi's actual `192.168.1.8`; the project has **not** been downloaded. Pi DCP Set IP changes remain refused to preserve SSH.
+
+**Next acceptance test:** generate a separate local experimental GSDML file using a fresh valid, date-and-time filename, transfer it to an otherwise empty source folder, install/upgrade the TIA project device's GSDML revision, then repeat `Compile → Hardware (rebuild all)`. A successful local Python/CI run does **not** yet imply the hardware compilation is fixed. Keep temporary, third-party laboratory VendorID values out of version control.
+
 ## Acceptance matrix
 
 | Feature | Previous hardware | Current newly written code | Next real check |
@@ -127,7 +139,7 @@ These changes are guarded by offline tests; **TIA re-import and official XSD val
 | DCE/RPC connectionless | Not yet PLC tested | Header parser only | Unit test now; live protocol only with controller |
 | PNIO CM/AR Connect | **NOT implemented** | Simulated AR state/watchdog only | Requires actual Connect/Release and RPC server |
 | RTC1 cyclic IO | **NOT implemented** | Frame codec only | Requires negotiated IOCR and actual PLC |
-| GSDML | **NOT imported/validated** | Structural generator with identity guard | Obtain valid VendorID; official XSD/TIA import |
+| GSDML | **TIA V19 installation PASS; catalog/DAP/DI/DO and controller IO-System assignment PASS; first offline hardware compile 3 errors due to missing status-byte capacity** | Generator now emits IOCR limits 6/6/12; runtime AR still absent | Re-import updated GSDML revision, recompile; official PI XSD validation and owned VendorID remain open |
 | 8DI/8DO application | Physical armv6 unit tests PASS | Five catalog descriptors and safe DO reset | Integrate with CM/RTC1 after actual handshake |
 
 ## Safety and logs
