@@ -65,6 +65,19 @@ class GsdmlTests(unittest.TestCase):
         self.assertEqual([s.attrib["SubslotNumber"] for s in subslots],
                          ["32768", "32769"])
 
+    def test_tia_v19_interface_mib_and_port_mau_schema_regressions(self):
+        """Second TIA V19 install log: required SupportedMibs and port child."""
+        root = gsd.build_gsdml(self.cfg, 0x1234, 0x5678,
+                               "TEST FIXTURE", "testnode")
+        interface = root.find(".//g:InterfaceSubmoduleItem", self.ns)
+        port = root.find(".//g:PortSubmoduleItem", self.ns)
+        self.assertEqual(interface.attrib["SupportedMibs"], "MIB2")
+        self.assertEqual(port.attrib["MAUTypes"], "16")
+        mau_items = port.findall("g:MAUTypeList/g:MAUTypeItem", self.ns)
+        self.assertEqual(len(mau_items), 1)
+        self.assertEqual(mau_items[0].attrib["Value"], "16")
+        self.assertEqual(mau_items[0].attrib["AdjustSupported"], "false")
+
     def test_generator_xml_is_well_formed(self):
         root = gsd.build_gsdml(self.cfg, 0, 0, "UNASSIGNED", "openpnio-test")
         reloaded = ET.fromstring(ET.tostring(root))
