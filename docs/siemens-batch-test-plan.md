@@ -95,6 +95,15 @@ Generator updated to include `NameOfStationNotTransferable="true"` (no transfera
 
 For a new attempt: `git pull` on the Pi, regenerate local experimental XML with the *same manually selected lab IDs*, then copy it to Windows again and repeat TIA's Options → Manage general station description files (GSD). Other schema errors may become visible after the first two are fixed.
 
+### Second TIA V19 GSDML import attempt — additional schema checks (2026-10-17)
+
+After fixing the first two issues, TIA V19 reported **two new SchemaValidation errors**, confirming the initial failures were eliminated:
+
+- `InterfaceSubmoduleItem`: mandatory `SupportedMibs` missing, line 51. The experimental generator now emits `SupportedMibs="MIB2"`, matching the GSDML V2.32 example convention. **This is a GSDML declaration only; OpenPNIO does not currently serve SNMP/MIB2. Do not deploy or claim device conformance on this basis.**
+- `PortSubmoduleItem`: incomplete content, expected `RecordDataList` or `MAUTypeList`, line 56. The generator now includes `<MAUTypeList><MAUTypeItem Value="16" AdjustSupported="false" /></MAUTypeList>` corresponding to the port's declared `MAUTypes="16"`. No runtime port speed changes are implemented.
+
+A second Python regression verifies both mandatory structures. **Siemens TIA re-import with these changes is still pending**. Keep the process running and only regenerate/copy local XML, using identical explicitly acknowledged session-only lab IDs; do not commit borrowed identities.
+
 ## Acceptance matrix
 
 | Feature | Previous hardware | Current newly written code | Next real check |
