@@ -84,20 +84,24 @@ def build_gsdml(cfg, vendor_id, device_id, vendor_name, dns_name):
                FixedInSlots="0", ModuleIdentNumber=hex32(d["module_ident"]),
                MinDeviceInterval="32", DNS_CompatibleName=dns_name,
                ObjectUUID_LocalIndex="1", DeviceAccessSupported="true",
-               CheckDeviceID_Allowed="true")
+               CheckDeviceID_Allowed="true",
+               NameOfStationNotTransferable="true")
     mi = elem(dap, "ModuleInfo")
     elem(mi, "Name", TextId="DAP_NAME")
     elem(mi, "InfoText", TextId="DAP_INFO")
     elem(mi, "OrderNumber", Value="OpenPNIO-8DI8DO-LAB")
     elem(mi, "SoftwareRelease", Value="V0.0.1")
+    # GSDML V2.32 DeviceAccessPointItem child elements have a strict
+    # sequence: SubslotList MUST precede IOConfigData and UseableModules.
+    # TIA Portal V19 rejects SubslotList when it follows UseableModules.
+    subslots = elem(dap, "SubslotList")
+    elem(subslots, "SubslotItem", SubslotNumber="32768", TextId="IFACE_TEXT")
+    elem(subslots, "SubslotItem", SubslotNumber="32769", TextId="PORT_TEXT")
     elem(dap, "IOConfigData", MaxInputLength="1", MaxOutputLength="1",
          MaxDataLength="2")
     use = elem(dap, "UseableModules")
     elem(use, "ModuleItemRef", ModuleItemTarget="M_DI", AllowedInSlots="1")
     elem(use, "ModuleItemRef", ModuleItemTarget="M_DO", AllowedInSlots="2")
-    subslots = elem(dap, "SubslotList")
-    elem(subslots, "SubslotItem", SubslotNumber="32768", TextId="IFACE_TEXT")
-    elem(subslots, "SubslotItem", SubslotNumber="32769", TextId="PORT_TEXT")
     virtual = elem(dap, "VirtualSubmoduleList")
     dsm = elem(virtual, "VirtualSubmoduleItem", ID="V_DAP",
                SubmoduleIdentNumber=hex32(d["submodule_ident"]),
