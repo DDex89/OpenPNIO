@@ -19,7 +19,7 @@ git pull
 sh scripts/pi1-batch-validation.sh
 ```
 
-This compiles with `-j1` suitable for Pi 1 ARMv6, executes CTest **12 checks** and Python **15 checks** (as of this plan) and leaves the interface untouched. A green GitHub Actions build does not replace this specific hardware run.
+This compiles with `-j1` suitable for Pi 1 ARMv6, executes CTest **13 checks** and Python **16 checks** (as of 2026-10-17) and leaves the interface untouched. A green GitHub Actions build does not replace this specific hardware run.
 
 For reference, unit test groups cover DCP parser/Identify/Get/guarded Set, IEEE LLDP frame build/parse, DCE/RPC v4 UDP header/drep/body bounds, generic RTC1 L2 tagged/untagged frame/APDU fields, provisional virtual 8DI/8DO device catalog, simulated AR connection watchdog/safe outputs, and GSDML XML structure and ID controls. None of these offline tests alone establishes Siemens PLC interoperability.
 
@@ -76,14 +76,22 @@ python3 tools/generate_gsdml.py --vendor-id 0xYOUR_PI_ASSIGNED_ID --device-id 0x
 
 The symbolic placeholders in the example are **not valid arguments**: supply actual numeric hex values. An additional **unregistered lab-only** experimental identity mode now exists in the GSDML generator and DCP responder; it requires explicit isolated-lab confirmations, takes a pair of IDs strictly as local parameters, and does NOT insert any borrowed identity into tracked GitHub files. See [lab identity override instructions](lab-identity-override.md). This mode must not be used on an ordinary/shared network or taken as proof of PI VendorID ownership. Even successful GSDML import would only validate an XML/catalog description, not that a PROFINET controller can establish AR or exchange IO.
 
+## Latest live test observations (2026-10-17)
+
+On Pi 1 the batch regression script printed `Ran 16 tests ... OK` and `PASS: offline protocol regression batch completed.` Windows PowerShell `--batch-read` returned **Identify All / Get Name / Get IP / Get ID / Get Options / Get Instance: 6/6 PASS** with one reply from Pi for each request. These PASS results confirm a response to each field selector, not independent verification of every decoded field's actual bytes.
+
+TIA Portal V19 then successfully completed `Scan and information retrieval completed`, discovering exactly one device as `testnode`, IP `192.168.1.8`, MAC `B8-27-EB-BB-9E-7A` while the Raspberry DCP responder was using an explicitly acknowledged, session-only laboratory identity. The numerical temporary identifiers are not stored in this repository; the TIA screenshot did **not** show them.
+
+The Pi tcpdump file `/tmp/openpnio-batch-1792235804.pcap` (local bench file, not committed) showed **15 basic LLDP advertisements**, from `b8:27:eb:bb:9e:7a` to `01:80:c2:00:00:0e`, EtherType `0x88cc`, length `61`, with device name `testnode`, captured over approximately 70.2 seconds. Adjacent transmission intervals were typically just over **5.0 seconds**. This validates outbound basic LLDP frames on Pi 1, **not** PN-specific LLDP TLVs, receiving LLDP, topology diagnostics or PLC interoperability.
+
 ## Acceptance matrix
 
 | Feature | Previous hardware | Current newly written code | Next real check |
 | --- | --- | --- | --- |
-| DCP Identify / Get IP/Name/ID | **TIA V19 PASS** for discovery and identification | Extended/retained | `--batch-read` and TIA rescan |
+| DCP Identify / Get IP/Name/ID | **PASS: live Windows DCP read-only batch 6/6**, plus TIA V19 rediscovery under temporary session-only laboratory IDs (numeric values kept local) | Extended/retained | Inspect actual ID bytes in packet capture; keep checking identity consistency |
 | DCP Set Name persistent | **TIA V19 PASS**: `testnode` saved and restored after process restart | Retained | Optional repeat (not required) |
 | DCP Set IP | Change deliberately refused on real Pi | **Still refusal-only** | Recheck IP remains 192.168.1.8 |
-| Basic LLDP transmit | Not yet physically tested | Codec plus opt-in `--lldp` live transmit | `tcpdump` showing 0x88cc sent from Pi |
+| Basic LLDP transmit | **PASS: real Pi 1 tcpdump** recorded 15 frames to `01:80:c2:00:00:0e`, EtherType `0x88cc`, approx. 5.01 s interval, name `testnode` | Codec plus opt-in `--lldp` live transmit | Validate individual TLVs and later PROFINET-specific topology extensions |
 | DCE/RPC connectionless | Not yet PLC tested | Header parser only | Unit test now; live protocol only with controller |
 | PNIO CM/AR Connect | **NOT implemented** | Simulated AR state/watchdog only | Requires actual Connect/Release and RPC server |
 | RTC1 cyclic IO | **NOT implemented** | Frame codec only | Requires negotiated IOCR and actual PLC |
