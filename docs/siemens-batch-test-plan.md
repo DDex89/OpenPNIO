@@ -74,7 +74,7 @@ This generates XML with **UNASSIGNED** `VendorID=0x0000` / `DeviceID=0x0000` to 
 python3 tools/generate_gsdml.py --vendor-id 0xYOUR_PI_ASSIGNED_ID --device-id 0xYOUR_DEVICE_ID --confirm-owned-vendor-id --output /tmp/GSDML-V2.32-OpenPNIO-Lab.xml
 ```
 
-The symbolic placeholders in the example are **not valid arguments**: supply actual numeric hex values. Even successful GSDML import would only validate an XML/catalog description, not that a PROFINET controller can establish AR or exchange IO.
+The symbolic placeholders in the example are **not valid arguments**: supply actual numeric hex values. An additional **unregistered lab-only** experimental identity mode now exists in the GSDML generator and DCP responder; it requires explicit isolated-lab confirmations, takes a pair of IDs strictly as local parameters, and does NOT insert any borrowed identity into tracked GitHub files. See [lab identity override instructions](lab-identity-override.md). This mode must not be used on an ordinary/shared network or taken as proof of PI VendorID ownership. Even successful GSDML import would only validate an XML/catalog description, not that a PROFINET controller can establish AR or exchange IO.
 
 ## Acceptance matrix
 
@@ -92,4 +92,4 @@ The symbolic placeholders in the example are **not valid arguments**: supply act
 
 ## Safety and logs
 
-We do **not** enable production outputs, spoof Siemens manufacturer VendorID, imply PI conformance or deploy on a plant network. Capture `0x8892`, `0x88cc` and `UDP 34964` while excluding TCP/22. A default PSK for SIMATIC NET Remote Communication is unrelated to PROFINET DCP. When sharing captures, redact unrelated private LAN endpoints if required.
+By default we do **not** enable production outputs, borrow anyone's VendorID, imply PI conformance or deploy on a plant network. A separately acknowledged **isolated bench identity override** is explicitly experimental and never indicates manufacturer ownership; do not enable it on shared or plant Ethernet. Capture `0x8892`, `0x88cc` and `UDP 34964` while excluding TCP/22. A default PSK for SIMATIC NET Remote Communication is unrelated to PROFINET DCP. When sharing captures, redact unrelated private LAN endpoints if required.
