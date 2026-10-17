@@ -50,6 +50,14 @@ Read the [hardware validation report](docs/hardware-validation-2026-10-17.md), t
 
 **This is a Siemens TIA Portal DCP discovery/configuration interoperability milestone, not a working PROFINET IO Device.** GSDML import, RPC/CM, AR establishment, cyclic RTC1 I/O and actual S7-1500 PLC connectivity remain future work.
 
+## PROFINET VendorID policy and Siemens reference examples
+
+For **private laboratory interoperability experiments**, OpenPNIO supports a temporary runtime VendorID/DeviceID override. The intended reference is a VendorID **shown in [Siemens' published Linux Native PROFINET Device GSDML example](https://docs.industrial-operations-x.siemens.cloud/r/en-us/v3.3.0/profinet-driver/quick-start/engineering/hardware-configuration-of-profinet-device-with-the-gsdml-file/example-gsdml-file-for-linux-native-profinet-device)**. That example uses a **Siemens-assigned manufacturer VendorID**, **not** a universally reserved test ID and **not** an ID assigned to OpenPNIO. Any temporary use must be explicitly acknowledged and limited to a controlled non-production lab environment; it does not imply Siemens affiliation, approval, or certification.
+
+**Hardware-test distinction:** The confirmed TIA Portal V19 discovery and persistent station-name tests used OpenPNIO's default, unassigned identity (`VendorID=0x0000`, `DeviceID=0x0000`). The temporary reference-ID configuration is **prepared but has not yet been verified in a TIA Portal/GSDML import test**. No borrowed VendorID is hardcoded in the source code, saved to configuration, or selected by default. The identity is supplied at runtime and to a locally generated experimental GSDML; see [lab identity override](docs/lab-identity-override.md).
+
+**For actual deployment, product distribution, certification, or use beyond this experiment**, request your **own PROFINET VendorID from [PROFIBUS & PROFINET International (PI)](https://www.profibus.com/products/ident-numbers)**, choose and maintain the associated DeviceID, and use the **same** identifiers in the device firmware/DCP responses and GSDML. PI assigns VendorIDs free of charge; the PI contact is `certification@profibus.com`. Siemens reference identifiers are not substitutes for a PI-assigned ID.
+
 ## Documentation
 
 - [Architecture](docs/architecture.md)
