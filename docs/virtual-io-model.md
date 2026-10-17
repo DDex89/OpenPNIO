@@ -1,6 +1,6 @@
 # OpenPNIO virtual 8DI / 8DO process model
 
-**Status:** portable C11 core implemented and tested with CTest. **No PROFINET IO cyclic exchange or GSDML is implemented yet.**
+**Status:** portable C11 core implemented and tested with CTest. An experimental GSDML **preview generator** exists, but the GSDML is not validated with PI XSD/TIA. **No live PROFINET IO AR or cyclic exchange is implemented yet.**
 
 This intentionally small lab model is a step between hardware-validated DCP and a Siemens S7-1500 IO-Controller connection. The first application data is **simulated in memory**: no Raspberry Pi GPIO, 24 V I/O, relay or actuator is attached to these bytes.
 
@@ -9,10 +9,12 @@ This intentionally small lab model is a step between hardware-validated DCP and 
 | Slot | Subslot | ModuleIdent | SubmoduleIdent | Input bytes | Output bytes |
 | ---: | ---: | ---: | ---: | ---: | ---: |
 | 0 (DAP placeholder) | 1 | `0x00000001` | `0x00000001` | 0 | 0 |
+| 0 (PDev interface X1) | 0x8000 | `0x00000001` | `0x00000F00` | 0 | 0 |
+| 0 (PDev port X1 P1) | 0x8001 | `0x00000001` | `0x00000F01` | 0 | 0 |
 | 1 (8DI) | 1 | `0x00001001` | `0x00001001` | 1 | 0 |
 | 2 (8DO) | 1 | `0x00001002` | `0x00001002` | 0 | 1 |
 
-**Important:** These IDs are original provisional *internal laboratory values*, **not** registered PI VendorIDs/DeviceIDs, and **not** a certified GSDML. Actual DAP/slot/subslot layout must be reviewed against the applicable PNIO/GSDML requirements before generating an importable description or claiming Siemens compatibility. Port subslots, I&M records and topology descriptions are not implemented.
+**Important:** These IDs are original provisional *internal laboratory values*, **not** registered PI VendorIDs/DeviceIDs, and **not** a certified GSDML. Actual DAP/slot/subslot layout must be reviewed against the applicable PNIO/GSDML requirements before generating an importable description or claiming Siemens compatibility. PDev interface/port descriptors are **only metadata** at this stage: I&M records, PNIO CM PDev negotiation and topology behavior are not implemented. See `config/lab-device.json` and `tools/generate_gsdml.py` for the deliberately gated XML generator.
 
 ## Behavior and API
 
@@ -33,7 +35,7 @@ cmake --build build -j1
 ctest --test-dir build --output-on-failure
 ```
 
-CTest entry `virtual_8di_8do` validates the catalog, byte sizes, slot/subslot checks, read/write directions, disconnected-write refusal and fail-safe output reset on controller loss.
+CTest entry `virtual_8di_8do` validates all five descriptors, byte sizes, slot/subslot checks, read/write directions, disconnected-write refusal and fail-safe output reset on controller loss. `ar_watchdog_simulation` additionally validates timeout/controller-STOP behavior independently of any real CM/AR handshake.
 
 ## Path to a real controller
 
