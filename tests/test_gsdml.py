@@ -64,6 +64,29 @@ class GsdmlTests(unittest.TestCase):
             self.assertEqual(root.find(".//g:DeviceIdentity", self.ns).attrib["DeviceID"],
                              "0x5678")
 
+    def test_unregistered_identity_requires_isolated_lab_and_external_path(self):
+        with tempfile.TemporaryDirectory() as directory:
+            xml = Path(directory) / "GSDML-LAB.xml"
+            args = ["--vendor-id", "0x1234", "--device-id", "0x5678",
+                    "--lab-unregistered-identity", "--output", str(xml)]
+            with self.assertRaises(SystemExit):
+                gsd.main(args)  # --confirm-isolated-lab absent
+            gsd.main(args + ["--confirm-isolated-lab"])
+            root = ET.parse(xml)
+            identity = root.find(".//g:DeviceIdentity", self.ns)
+            self.assertEqual(identity.attrib["VendorID"], "0x1234")
+            self.assertEqual(identity.attrib["DeviceID"], "0x5678")
+            self.assertEqual(root.find(".//g:VendorName", self.ns).attrib["Value"],
+                             "OpenPNIO experimental")
+            with self.assertRaises(SystemExit):
+                gsd.main(args + ["--confirm-isolated-lab",
+                                 "--confirm-owned-vendor-id"])
+            with self.assertRaises(SystemExit):
+                gsd.main(["--vendor-id", "0x1234", "--device-id", "0x5678",
+                          "--lab-unregistered-identity", "--confirm-isolated-lab",
+                          "--output", str(gsd.ROOT / "GSDML-LAB-DO-NOT-COMMIT.xml")])
+            self.assertFalse((gsd.ROOT / "GSDML-LAB-DO-NOT-COMMIT.xml").exists())
+
     def test_manifest_matches_c11_identifiers(self):
         header = (gsd.ROOT / "include/openpnio/device_model.h").read_text(encoding="utf-8")
         self.assertIn("OPENPNIO_LAB_IDENT_DAP = 0x00000001", header)
