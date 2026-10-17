@@ -42,6 +42,29 @@ class GsdmlTests(unittest.TestCase):
         self.assertEqual(iface.attrib["SubmoduleIdentNumber"], "0x00000F00")
         self.assertEqual(port.attrib["SubmoduleIdentNumber"], "0x00000F01")
 
+    def test_tia_v19_schema_regression_missing_attribute_and_wrong_child_order(self):
+        """Regression for observed TIA V19 SchemaValidation errors at DAP."""
+        root = gsd.build_gsdml(self.cfg, 0x1234, 0x5678,
+                               "TEST FIXTURE", "testnode")
+        dap = root.find(".//g:DeviceAccessPointItem", self.ns)
+        self.assertIsNotNone(dap)
+        # NameOfStationNotTransferable is mandatory for the chosen schema;
+        # this prototype has no removable station-name memory carrier.
+        self.assertEqual(dap.attrib["NameOfStationNotTransferable"], "true")
+        direct_children = [x.tag.split("}")[-1] for x in dap]
+        for expected in ("ModuleInfo", "SubslotList", "IOConfigData",
+                         "UseableModules", "VirtualSubmoduleList",
+                         "SystemDefinedSubmoduleList"):
+            self.assertIn(expected, direct_children)
+        positions = [direct_children.index(x) for x in
+                     ("ModuleInfo", "SubslotList", "IOConfigData",
+                      "UseableModules", "VirtualSubmoduleList",
+                      "SystemDefinedSubmoduleList")]
+        self.assertEqual(positions, sorted(positions))
+        subslots = dap.find("g:SubslotList", self.ns)
+        self.assertEqual([s.attrib["SubslotNumber"] for s in subslots],
+                         ["32768", "32769"])
+
     def test_generator_xml_is_well_formed(self):
         root = gsd.build_gsdml(self.cfg, 0, 0, "UNASSIGNED", "openpnio-test")
         reloaded = ET.fromstring(ET.tostring(root))
