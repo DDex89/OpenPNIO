@@ -7,6 +7,7 @@
 #include "openpnio/dcp_get.h"
 #include "openpnio/dcp_set.h"
 #include "openpnio/lldp.h"
+#include "openpnio/lab_identity.h"
 #include <arpa/inet.h>
 #include <errno.h>
 #include <fcntl.h>
@@ -208,6 +209,7 @@ static int send_response(int fd,int ifindex,const uint8_t *tx,size_t written,
 int main(int argc,char **argv)
 {
     int fd,ifindex,rc,i,lldp_fd=-1;
+    int vendor_supplied=0,device_supplied=0,lab_acknowledged=0;
     uint64_t next_lldp=0;
     const char *interface=NULL;
     struct ifreq ifr;
@@ -223,7 +225,21 @@ int main(int argc,char **argv)
     state.identity.station_type="OpenPNIO Linux prototype";
     state.identity.vendor_id=0; state.identity.device_id=0;
     for(i=1;i<argc;i++) {
-        if(strcmp(argv[i],"--lldp")==0) {
+        if(strcmp(argv[i],"--acknowledge-isolated-lab")==0) {
+            lab_acknowledged=1;
+        } else if(strcmp(argv[i],"--lab-vendor-id")==0 && i+1<argc) {
+            if(openpnio_lab_identity_parse(argv[++i],&state.identity.vendor_id)!=0) {
+                fprintf(stderr,"Invalid lab VendorID: expected 1..0xFFFE\n");
+                return 2;
+            }
+            vendor_supplied=1;
+        } else if(strcmp(argv[i],"--lab-device-id")==0 && i+1<argc) {
+            if(openpnio_lab_identity_parse(argv[++i],&state.identity.device_id)!=0) {
+                fprintf(stderr,"Invalid lab DeviceID: expected 1..0xFFFE\n");
+                return 2;
+            }
+            device_supplied=1;
+        } else if(strcmp(argv[i],"--lldp")==0) {
             state.enable_lldp=1;
         } else if(strcmp(argv[i],"--allow-set-name")==0) {
             state.allow_set_name=1;
@@ -232,12 +248,21 @@ int main(int argc,char **argv)
         } else if(!interface && argv[i][0]!='-') {
             interface=argv[i];
         } else {
-            fprintf(stderr,"Usage: %s <interface> [--allow-set-name] [--station-file PATH] [--lldp]\n",argv[0]);
+            fprintf(stderr,"Usage: %s <interface> [--allow-set-name] [--station-file PATH] [--lldp] [--lab-vendor-id ID --lab-device-id ID --acknowledge-isolated-lab]\n",argv[0]);
             return 2;
         }
     }
     if(!interface || strlen(interface)>=IFNAMSIZ) {
-        fprintf(stderr,"Usage: %s <interface> [--allow-set-name] [--station-file PATH]\n",argv[0]);
+        fprintf(stderr,"Usage: %s <interface> [--allow-set-name] [--station-file PATH] [--lldp] [--lab-vendor-id ID --lab-device-id ID --acknowledge-isolated-lab]\n",argv[0]);
+        return 2;
+    }
+    if(openpnio_lab_identity_validate(lab_acknowledged,
+                                      vendor_supplied,device_supplied,
+                                      state.identity.vendor_id,
+                                      state.identity.device_id)!=0) {
+        fprintf(stderr,"Lab identity override requires BOTH --lab-vendor-id and"
+                       " --lab-device-id plus --acknowledge-isolated-lab.\n"
+                       "Never use a third-party VendorID outside a dedicated bench.\n");
         return 2;
     }
     if(state.station_file) {
@@ -289,6 +314,11 @@ int main(int argc,char **argv)
            state.identity.ip[2],state.identity.ip[3]);
     printf("Set Name: %s; Set IP: changes refused (matching suite accepted as no-op)\n",
            state.allow_set_name ? "enabled" : "disabled");
+    if(vendor_supplied) {
+        printf("LAB-ONLY DCP IDENTITY: VendorID 0x%04X / DeviceID 0x%04X"
+               " (not owned, session-only; no product claim)\n",
+               (unsigned)state.identity.vendor_id,(unsigned)state.identity.device_id);
+    }
     if(state.enable_lldp)
         puts("LLDP: basic IEEE advertisement enabled every 5s; no PI TLVs/neighbor DB");
     fflush(stdout);
