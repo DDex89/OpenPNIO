@@ -72,11 +72,38 @@ class GsdmlTests(unittest.TestCase):
         interface = root.find(".//g:InterfaceSubmoduleItem", self.ns)
         port = root.find(".//g:PortSubmoduleItem", self.ns)
         self.assertEqual(interface.attrib["SupportedMibs"], "MIB2")
-        self.assertEqual(port.attrib["MAUTypes"], "16")
+        self.assertNotIn("MAUTypes", port.attrib)
         mau_items = port.findall("g:MAUTypeList/g:MAUTypeItem", self.ns)
         self.assertEqual(len(mau_items), 1)
         self.assertEqual(mau_items[0].attrib["Value"], "16")
         self.assertEqual(mau_items[0].attrib["AdjustSupported"], "false")
+
+    def test_tia_v19_semantic_regressions_profile_name_timing_and_port(self):
+        """Regression for 11 errors from third TIA Portal V19 install log."""
+        root = gsd.build_gsdml(self.cfg, 0x1234, 0x5678,
+                               "TEST FIXTURE", "testnode")
+        location = root.attrib["{" + gsd.XSI + "}schemaLocation"]
+        self.assertIn(r"..\xsd\GSDML-DeviceProfile-V2.32.xsd", location)
+        dap = root.find(".//g:DeviceAccessPointItem", self.ns)
+        # Avoid claiming V2.31+ mandatory, unimplemented NoD / boundary / reset.
+        self.assertEqual(dap.attrib["PNIO_Version"], "V2.3")
+        for feature in ("MultipleWriteSupported", "LLDP_NoD_Supported",
+                        "ResetToFactoryModes"):
+            self.assertNotIn(feature, dap.attrib)
+        self.assertIsNone(dap.find("g:CertificationInfo", self.ns))
+        iface = root.find(".//g:InterfaceSubmoduleItem", self.ns)
+        self.assertNotIn("PTP_BoundarySupported", iface.attrib)
+        self.assertNotIn("DCP_BoundarySupported", iface.attrib)
+        ar = iface.find("g:ApplicationRelations", self.ns)
+        self.assertEqual(ar.attrib["StartupMode"], "Legacy")
+        timing = ar.find("g:TimingProperties", self.ns)
+        self.assertEqual(timing.attrib["ReductionRatio"],
+                         "1 2 4 8 16 32 64 128 256 512")
+        port = root.find(".//g:PortSubmoduleItem", self.ns)
+        self.assertNotIn("MAUTypes", port.attrib)
+        mau = port.find("g:MAUTypeList/g:MAUTypeItem", self.ns)
+        self.assertEqual(mau.attrib["Value"], "16")
+        self.assertEqual(mau.attrib["AdjustSupported"], "false")
 
     def test_generator_xml_is_well_formed(self):
         root = gsd.build_gsdml(self.cfg, 0, 0, "UNASSIGNED", "openpnio-test")
@@ -94,15 +121,16 @@ class GsdmlTests(unittest.TestCase):
             with self.assertRaises(SystemExit):
                 gsd.main(["--vendor-id", "0x1234", "--device-id", "0x5678",
                           "--output", str(path)])
+            owned = Path(directory) / "GSDML-V2.32-TestVendor-Owned-20261017.xml"
             gsd.main(["--vendor-id", "0x1234", "--device-id", "0x5678",
-                      "--confirm-owned-vendor-id", "--output", str(path)])
-            root = ET.parse(path)
+                      "--confirm-owned-vendor-id", "--output", str(owned)])
+            root = ET.parse(owned)
             self.assertEqual(root.find(".//g:DeviceIdentity", self.ns).attrib["DeviceID"],
                              "0x5678")
 
     def test_unregistered_identity_requires_isolated_lab_and_external_path(self):
         with tempfile.TemporaryDirectory() as directory:
-            xml = Path(directory) / "GSDML-LAB.xml"
+            xml = Path(directory) / "GSDML-V2.32-TestVendor-Lab-20261017.xml"
             args = ["--vendor-id", "0x1234", "--device-id", "0x5678",
                     "--lab-unregistered-identity", "--output", str(xml)]
             with self.assertRaises(SystemExit):
@@ -120,8 +148,17 @@ class GsdmlTests(unittest.TestCase):
             with self.assertRaises(SystemExit):
                 gsd.main(["--vendor-id", "0x1234", "--device-id", "0x5678",
                           "--lab-unregistered-identity", "--confirm-isolated-lab",
-                          "--output", str(gsd.ROOT / "GSDML-LAB-DO-NOT-COMMIT.xml")])
+                          "--output", str(gsd.ROOT / "GSDML-V2.32-TestVendor-DO-NOT-COMMIT-20261017.xml")])
             self.assertFalse((gsd.ROOT / "GSDML-LAB-DO-NOT-COMMIT.xml").exists())
+
+    def test_install_candidate_filename_guard(self):
+        with tempfile.TemporaryDirectory() as directory:
+            invalid = Path(directory) / "GSDML-V2.32-TestVendor-Lab.xml"
+            with self.assertRaises(SystemExit):
+                gsd.main(["--vendor-id", "0x1234", "--device-id", "0x5678",
+                          "--lab-unregistered-identity", "--confirm-isolated-lab",
+                          "--output", str(invalid)])
+            self.assertFalse(invalid.exists())
 
     def test_manifest_matches_c11_identifiers(self):
         header = (gsd.ROOT / "include/openpnio/device_model.h").read_text(encoding="utf-8")
