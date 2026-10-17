@@ -115,14 +115,16 @@ def build_gsdml(cfg, vendor_id, device_id, vendor_name, dns_name):
                  ID="PDEV_IFACE", SubslotNumber="32768",
                  SubmoduleIdentNumber=hex32(cfg["pdev_interface"]["submodule_ident"]),
                  TextId="IFACE_TEXT", SupportedRT_Classes="RT_CLASS_1",
-                 SupportedProtocols="LLDP")
+                 SupportedProtocols="LLDP", SupportedMibs="MIB2")
     ar = elem(iface, "ApplicationRelations", NumberOfAR="1")
     elem(ar, "TimingProperties", SendClock="32",
          ReductionRatio="1 2 4 8 16 32 64 128")
-    elem(system, "PortSubmoduleItem",
-         ID="PDEV_PORT1", SubslotNumber="32769",
-         SubmoduleIdentNumber=hex32(cfg["pdev_port"]["submodule_ident"]),
-         TextId="PORT_TEXT", MAUTypes="16")
+    port = elem(system, "PortSubmoduleItem",
+                ID="PDEV_PORT1", SubslotNumber="32769",
+                SubmoduleIdentNumber=hex32(cfg["pdev_port"]["submodule_ident"]),
+                TextId="PORT_TEXT", MAUTypes="16")
+    mau = elem(port, "MAUTypeList")
+    elem(mau, "MAUTypeItem", Value="16", AdjustSupported="false")
     modules = elem(ap, "ModuleList")
     for k, name, label, direction in (
         ("digital_input", "M_DI", "8_DI_NAME", "Input"),
