@@ -1,0 +1,10 @@
+{
+  "profile": "openpnio-virtual-8di-8do",
+  "product_family": "OpenPNIO Lab",
+  "station_type": "OpenPNIO Linux prototype",
+  "dap": {"slot": 0, "subslot": 1, "module_ident": "0x00000001", "submodule_ident": "0x00000001"},
+  "pdev_interface": {"slot": 0, "subslot": 32768, "module_ident": "0x00000001", "submodule_ident": "0x00000F00"},
+  "pdev_port": {"slot": 0, "subslot": 32769, "module_ident": "0x00000001", "submodule_ident": "0x00000F01"},
+  "digital_input": {"slot": 1, "subslot": 1, "module_ident": "0x00001001", "submodule_ident": "0x00001001", "input_bytes": 1, "output_bytes": 0},
+  "digital_output": {"slot": 2, "subslot": 1, "module_ident": "0x00001002", "submodule_ident": "0x00001002", "input_bytes": 0, "output_bytes": 1}
+}
