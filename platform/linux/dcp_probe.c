@@ -6,6 +6,7 @@
 #include "openpnio/dcp_device.h"
 #include "openpnio/dcp_get.h"
 #include "openpnio/dcp_set.h"
+#include "openpnio/lldp.h"
 #include <arpa/inet.h>
 #include <errno.h>
 #include <fcntl.h>
@@ -23,16 +24,41 @@
 #include <sys/ioctl.h>
 #include <sys/socket.h>
 #include <unistd.h>
+#include <time.h>
 
 typedef struct bench {
     openpnio_dcp_identity_t identity;
     char station_name[241];
     const char *station_file; /* optional persistence path, selected by operator */
     int allow_set_name;
+    int enable_lldp;
 } bench_t;
 
 static volatile sig_atomic_t running = 1;
 static void stop(int sig) { (void)sig; running = 0; }
+static uint64_t monotonic_ms(void)
+{
+    struct timespec ts;
+    if (clock_gettime(CLOCK_MONOTONIC,&ts)!=0) return 0;
+    return (uint64_t)ts.tv_sec*1000u + (uint64_t)ts.tv_nsec/1000000u;
+}
+static void advertise_lldp(int fd, int ifindex, const uint8_t mac[6],
+                           const char *station_name)
+{
+    uint8_t frame[1024];
+    size_t length=0;
+    struct sockaddr_ll dst;
+    if (fd<0 || openpnio_lldp_build(mac,station_name,120,
+                                   frame,sizeof frame,&length)!=0) return;
+    memset(&dst,0,sizeof dst);
+    dst.sll_family=AF_PACKET;
+    dst.sll_protocol=htons(0x88cc);
+    dst.sll_ifindex=ifindex;
+    dst.sll_halen=6;
+    memcpy(dst.sll_addr,frame,6);
+    if (sendto(fd,frame,length,0,(struct sockaddr*)&dst,sizeof dst)<0)
+        perror("sendto(LLDP)");
+}
 
 static int valid_station_name(const char *p, size_t n)
 {
@@ -181,7 +207,8 @@ static int send_response(int fd,int ifindex,const uint8_t *tx,size_t written,
 }
 int main(int argc,char **argv)
 {
-    int fd,ifindex,rc,i;
+    int fd,ifindex,rc,i,lldp_fd=-1;
+    uint64_t next_lldp=0;
     const char *interface=NULL;
     struct ifreq ifr;
     struct sockaddr_ll bind_addr;
@@ -196,14 +223,16 @@ int main(int argc,char **argv)
     state.identity.station_type="OpenPNIO Linux prototype";
     state.identity.vendor_id=0; state.identity.device_id=0;
     for(i=1;i<argc;i++) {
-        if(strcmp(argv[i],"--allow-set-name")==0) {
+        if(strcmp(argv[i],"--lldp")==0) {
+            state.enable_lldp=1;
+        } else if(strcmp(argv[i],"--allow-set-name")==0) {
             state.allow_set_name=1;
         } else if(strcmp(argv[i],"--station-file")==0 && i+1<argc) {
             state.station_file=argv[++i];
         } else if(!interface && argv[i][0]!='-') {
             interface=argv[i];
         } else {
-            fprintf(stderr,"Usage: %s <interface> [--allow-set-name] [--station-file PATH]\n",argv[0]);
+            fprintf(stderr,"Usage: %s <interface> [--allow-set-name] [--station-file PATH] [--lldp]\n",argv[0]);
             return 2;
         }
     }
@@ -234,6 +263,19 @@ int main(int argc,char **argv)
     if(bind(fd,(struct sockaddr*)&bind_addr,sizeof bind_addr)<0) {
         perror("bind");close(fd);return 1;
     }
+    if(state.enable_lldp) {
+        struct sockaddr_ll lldp_bind;
+        lldp_fd=socket(AF_PACKET,SOCK_RAW,htons(0x88cc));
+        if(lldp_fd<0) {perror("LLDP socket");close(fd);return 1;}
+        memset(&lldp_bind,0,sizeof lldp_bind);
+        lldp_bind.sll_family=AF_PACKET;
+        lldp_bind.sll_protocol=htons(0x88cc);
+        lldp_bind.sll_ifindex=ifindex;
+        if(bind(lldp_fd,(struct sockaddr*)&lldp_bind,sizeof lldp_bind)<0) {
+            perror("LLDP bind");close(lldp_fd);close(fd);return 1;
+        }
+        next_lldp=0; /* immediate first advertisement */
+    }
     signal(SIGINT,stop);
     signal(SIGTERM,stop);
     pfd.fd=fd; pfd.events=POLLIN;
@@ -247,8 +289,14 @@ int main(int argc,char **argv)
            state.identity.ip[2],state.identity.ip[3]);
     printf("Set Name: %s; Set IP: changes refused (matching suite accepted as no-op)\n",
            state.allow_set_name ? "enabled" : "disabled");
+    if(state.enable_lldp)
+        puts("LLDP: basic IEEE advertisement enabled every 5s; no PI TLVs/neighbor DB");
     fflush(stdout);
     while(running) {
+        if (state.enable_lldp && monotonic_ms()>=next_lldp) {
+            advertise_lldp(lldp_fd,ifindex,mac,state.station_name);
+            next_lldp=monotonic_ms()+5000;
+        }
         struct sockaddr_ll peer;
         socklen_t peer_len=sizeof peer;
         ssize_t n;
@@ -277,6 +325,7 @@ int main(int argc,char **argv)
         }
         if(rc==1 && service) (void)send_response(fd,ifindex,tx,written,service);
     }
+    if (lldp_fd>=0) close(lldp_fd);
     close(fd);
     return 0;
 }
