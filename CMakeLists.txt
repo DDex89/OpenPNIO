@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.16)
 project(OpenPNIO VERSION 0.0.1 LANGUAGES C)
 
-add_library(openpnio STATIC src/frame.c src/dcp.c src/dcp_response.c src/dcp_device.c src/dcp_set.c src/dcp_get.c src/dcp_identity_fields.c src/device_model.c)
+add_library(openpnio STATIC src/frame.c src/dcp.c src/dcp_response.c src/dcp_device.c src/dcp_set.c src/dcp_get.c src/dcp_identity_fields.c src/device_model.c src/lldp.c src/rtc1.c src/rpc_cl.c)
 target_include_directories(openpnio PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include)
 target_compile_features(openpnio PUBLIC c_std_11)
 
@@ -32,6 +32,18 @@ if(BUILD_TESTING)
     add_executable(test_dcp_get tests/test_dcp_get.c)
     target_link_libraries(test_dcp_get PRIVATE openpnio)
     add_test(NAME dcp_get COMMAND test_dcp_get)
+
+    add_executable(test_lldp tests/test_lldp.c)
+    target_link_libraries(test_lldp PRIVATE openpnio)
+    add_test(NAME lldp_codec COMMAND test_lldp)
+
+    add_executable(test_rtc1 tests/test_rtc1.c)
+    target_link_libraries(test_rtc1 PRIVATE openpnio)
+    add_test(NAME rtc1_codec COMMAND test_rtc1)
+
+    add_executable(test_rpc_cl tests/test_rpc_cl.c)
+    target_link_libraries(test_rpc_cl PRIVATE openpnio)
+    add_test(NAME dce_rpc_cl_codec COMMAND test_rpc_cl)
 
     add_executable(test_device_model tests/test_device_model.c)
     target_link_libraries(test_device_model PRIVATE openpnio)
