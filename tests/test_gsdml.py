@@ -42,6 +42,25 @@ class GsdmlTests(unittest.TestCase):
         self.assertEqual(iface.attrib["SubmoduleIdentNumber"], "0x00000F00")
         self.assertEqual(port.attrib["SubmoduleIdentNumber"], "0x00000F01")
 
+    def test_tia_v19_compiler_iocr_lengths_include_status_qualifiers(self):
+        """Real S7-1500 hardware compile: 6 B each direction, 12 B combined.
+
+        IOConfigData budgets include IOCR status/user-data qualifiers and
+        must not be mistaken for the 1-byte per-direction process image.
+        """
+        root = gsd.build_gsdml(self.cfg, 0x1234, 0x5678,
+                               "TEST FIXTURE", "testnode")
+        io_limits = root.find(".//g:DeviceAccessPointItem/g:IOConfigData",
+                              self.ns)
+        self.assertIsNotNone(io_limits)
+        self.assertEqual(io_limits.attrib["MaxInputLength"], "6")
+        self.assertEqual(io_limits.attrib["MaxOutputLength"], "6")
+        self.assertEqual(io_limits.attrib["MaxDataLength"], "12")
+        self.assertEqual(
+            root.find(".//g:Input/g:DataItem", self.ns).attrib["Length"], "1")
+        self.assertEqual(
+            root.find(".//g:Output/g:DataItem", self.ns).attrib["Length"], "1")
+
     def test_tia_v19_schema_regression_missing_attribute_and_wrong_child_order(self):
         """Regression for observed TIA V19 SchemaValidation errors at DAP."""
         root = gsd.build_gsdml(self.cfg, 0x1234, 0x5678,
