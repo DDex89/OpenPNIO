@@ -84,6 +84,17 @@ TIA Portal V19 then successfully completed `Scan and information retrieval compl
 
 The Pi tcpdump file `/tmp/openpnio-batch-1792235804.pcap` (local bench file, not committed) showed **15 basic LLDP advertisements**, from `b8:27:eb:bb:9e:7a` to `01:80:c2:00:00:0e`, EtherType `0x88cc`, length `61`, with device name `testnode`, captured over approximately 70.2 seconds. Adjacent transmission intervals were typically just over **5.0 seconds**. This validates outbound basic LLDP frames on Pi 1, **not** PN-specific LLDP TLVs, receiving LLDP, topology diagnostics or PLC interoperability.
 
+## TIA Portal V19 initial GSDML import — schema error and fix pending retest
+
+TIA Portal recognized the locally generated `GSDML-V2.32-OpenPNIO-LOCAL.lab.xml` in its GSD installer but returned **"GSD file was not installed"** with exactly two reported `SchemaValidation` errors:
+
+- `DeviceAccessPointItem[@ID='DAP']` lacked the mandatory `NameOfStationNotTransferable` attribute.
+- The DAP's `SubslotList` was emitted **after `UseableModules`**, violating the required XML child order. For this generator the corrected order is `ModuleInfo → SubslotList → IOConfigData → UseableModules → VirtualSubmoduleList → SystemDefinedSubmoduleList`.
+
+Generator updated to include `NameOfStationNotTransferable="true"` (no transferable/removable name storage medium) and emit `SubslotList` earlier. Python offline regression asserts the attribute and DAP child order. **Reinstall with TIA V19 still PENDING.** This change is to the GSDML generator only; no live DCP or LLDP code was changed. No borrowed vendor/device IDs were added to GitHub.
+
+For a new attempt: `git pull` on the Pi, regenerate local experimental XML with the *same manually selected lab IDs*, then copy it to Windows again and repeat TIA's Options → Manage general station description files (GSD). Other schema errors may become visible after the first two are fixed.
+
 ## Acceptance matrix
 
 | Feature | Previous hardware | Current newly written code | Next real check |
