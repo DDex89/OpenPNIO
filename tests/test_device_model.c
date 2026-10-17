@@ -5,22 +5,28 @@
 int main(void)
 {
     openpnio_device_model_t model;
-    const openpnio_submodule_descriptor_t *dap,*di_desc,*do_desc;
+    const openpnio_submodule_descriptor_t *dap,*pni,*pnp,*di_desc,*do_desc;
     uint8_t input=0, output=0x5a;
-    assert(openpnio_lab_submodule_count()==3);
+    assert(openpnio_lab_submodule_count()==5);
     dap=openpnio_lab_find_submodule(0,1);
+    pni=openpnio_lab_find_submodule(0,0x8000);
+    pnp=openpnio_lab_find_submodule(0,0x8001);
     di_desc=openpnio_lab_find_submodule(1,1);
     do_desc=openpnio_lab_find_submodule(2,1);
-    assert(dap && di_desc && do_desc);
+    assert(dap && pni && pnp && di_desc && do_desc);
+    assert(pni->submodule_ident==OPENPNIO_LAB_IDENT_PDEV_INTERFACE);
+    assert(pnp->submodule_ident==OPENPNIO_LAB_IDENT_PDEV_PORT_1);
     assert(dap->input_bytes==0 && dap->output_bytes==0);
     assert(di_desc->module_ident==OPENPNIO_LAB_IDENT_DI);
     assert(di_desc->input_bytes==1 && di_desc->output_bytes==0);
     assert(do_desc->module_ident==OPENPNIO_LAB_IDENT_DO);
     assert(do_desc->input_bytes==0 && do_desc->output_bytes==1);
     assert(openpnio_lab_submodule_at(0)==dap);
-    assert(openpnio_lab_submodule_at(1)==di_desc);
-    assert(openpnio_lab_submodule_at(2)==do_desc);
-    assert(openpnio_lab_submodule_at(3)==0);
+    assert(openpnio_lab_submodule_at(1)==pni);
+    assert(openpnio_lab_submodule_at(2)==pnp);
+    assert(openpnio_lab_submodule_at(3)==di_desc);
+    assert(openpnio_lab_submodule_at(4)==do_desc);
+    assert(openpnio_lab_submodule_at(5)==0);
     assert(openpnio_lab_find_submodule(2,2)==0);
     openpnio_device_model_init(&model);
     assert(model.operational==0 && openpnio_device_model_get_do(&model)==0);
