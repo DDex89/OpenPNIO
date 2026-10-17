@@ -24,6 +24,10 @@ int main(void)
     memcpy(broken,buffer,n);
     broken[n-1]=1; /* nonzero bytes following End TLV */
     assert(openpnio_lldp_parse(broken,n,&ll)==-1);
+    memcpy(broken,buffer,n);
+    /* Replace optional SystemName with duplicated mandatory Chassis-ID. */
+    broken[49]=0x02;broken[50]=0x08; 
+    assert(openpnio_lldp_parse(broken,n,&ll)==-1);
     assert(openpnio_lldp_build(mac,"testnode",0,buffer,sizeof buffer,&n)==-1);
     assert(openpnio_lldp_build(mac,"testnode",120,buffer,30,&n)==-1);
     puts("LLDP frame codec tests passed");
