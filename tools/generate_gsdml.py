@@ -54,7 +54,8 @@ def build_gsdml(cfg, vendor_id, device_id, vendor_name, dns_name):
     if not re.fullmatch(r"[a-z][a-z0-9-]{0,239}", dns_name) or dns_name.endswith("-"):
         raise ValueError("DNS_CompatibleName must be lowercase and DNS-compatible")
     root = ET.Element(tag("ISO15745Profile"),
-                      {"{" + XSI + "}schemaLocation": NS + " GSDML-DeviceProfile-V2.32.xsd"})
+                      {"{" + XSI + "}schemaLocation":
+                       NS + r" ..\xsd\GSDML-DeviceProfile-V2.32.xsd"})
     head = elem(root, "ProfileHeader")
     for k, v in [
         ("ProfileIdentification", "PROFINET Device Profile"),
@@ -80,7 +81,9 @@ def build_gsdml(cfg, vendor_id, device_id, vendor_name, dns_name):
     daps = elem(ap, "DeviceAccessPointList")
     d = cfg["dap"]
     dap = elem(daps, "DeviceAccessPointItem",
-               ID="DAP", PNIO_Version="V2.32", PhysicalSlots="0..2",
+               # GSDML schema version (V2.32) != implemented PNIO device version.
+               # V2.31+ requires unsupported boundary/ResetToFactory capabilities.
+               ID="DAP", PNIO_Version="V2.3", PhysicalSlots="0..2",
                FixedInSlots="0", ModuleIdentNumber=hex32(d["module_ident"]),
                MinDeviceInterval="32", DNS_CompatibleName=dns_name,
                ObjectUUID_LocalIndex="1", DeviceAccessSupported="true",
@@ -116,13 +119,14 @@ def build_gsdml(cfg, vendor_id, device_id, vendor_name, dns_name):
                  SubmoduleIdentNumber=hex32(cfg["pdev_interface"]["submodule_ident"]),
                  TextId="IFACE_TEXT", SupportedRT_Classes="RT_CLASS_1",
                  SupportedProtocols="LLDP", SupportedMibs="MIB2")
-    ar = elem(iface, "ApplicationRelations", NumberOfAR="1")
+    ar = elem(iface, "ApplicationRelations", NumberOfAR="1",
+              StartupMode="Legacy")
     elem(ar, "TimingProperties", SendClock="32",
-         ReductionRatio="1 2 4 8 16 32 64 128")
+         ReductionRatio="1 2 4 8 16 32 64 128 256 512")
     port = elem(system, "PortSubmoduleItem",
                 ID="PDEV_PORT1", SubslotNumber="32769",
                 SubmoduleIdentNumber=hex32(cfg["pdev_port"]["submodule_ident"]),
-                TextId="PORT_TEXT", MAUTypes="16")
+                TextId="PORT_TEXT")
     mau = elem(port, "MAUTypeList")
     elem(mau, "MAUTypeItem", Value="16", AdjustSupported="false")
     modules = elem(ap, "ModuleList")
@@ -179,6 +183,15 @@ def main(argv=None):
                         help="acknowledge no production/shared industrial Ethernet connections")
     parser.add_argument("--output", type=Path, required=True)
     args = parser.parse_args(argv)
+    # TIA's GSD checker requires schema/vendor/family/release-date fields.
+    # Preview-only XML is intentionally not an import candidate.
+    if not args.preview and not re.fullmatch(
+            r"GSDML-V2\.32-[^-]+(?:-[^-]+)*-[^-]+-[0-9]{8}(?:-[0-9]{6})?\.xml",
+            args.output.name, re.IGNORECASE):
+        parser.error("GSDML filename must match "
+                     "GSDML-V2.32-Vendor-DeviceFamily-YYYYMMDD.xml "
+                     "(optional -HHMMSS); example: "
+                     "GSDML-V2.32-OpenPNIO-Lab-20261017.xml")
     if args.preview:
         if (args.vendor_id is not None or args.device_id is not None or
                 args.confirm_owned_vendor_id or args.lab_unregistered_identity or
