@@ -39,10 +39,10 @@ python3 tools/generate_gsdml.py \
     --confirm-isolated-lab \
     --vendor-name 'OpenPNIO experimental' \
     --dns-name testnode \
-    --output /tmp/GSDML-V2.32-OpenPNIO-LOCAL.lab.xml
+    --output /tmp/GSDML-V2.32-OpenPNIO-Lab-20261017.xml
 ```
 
-The generator only verifies XML well-formedness and internal manifest consistency; this is **not yet official GSDML schema validation**.
+The generator checks local XML structure and requires the PI filename format `GSDML-V2.32-Vendor-Family-YYYYMMDD.xml` for install candidates; schema `V2.32` is distinct from the lab prototype's declared device profile `PNIO_Version=V2.3`. **An official PI XSD validation and successful Siemens TIA V19 installation are still pending.** The declared PDev interface/IO behavior is a provisional catalog description, not running IO.
 
 **Then start the DCP responder**, only on a physically isolated Pi lab segment:
 
@@ -62,7 +62,7 @@ It should report `Station: testnode`, actual eth0 IP, and an explicit **LAB-ONLY
 To copy the local XML from the Pi onto the Windows TIA Portal machine, use Windows PowerShell:
 
 ```powershell
-scp su@192.168.1.8:/tmp/GSDML-V2.32-OpenPNIO-LOCAL.lab.xml "$env:USERPROFILE\Downloads\"
+scp su@192.168.1.8:/tmp/GSDML-V2.32-OpenPNIO-Lab-20261017.xml "$env:USERPROFILE\Downloads\"
 ```
 
 Confirm the runtime DCP DeviceID field and the XML `DeviceIdentity` agree. Do not mistake an XML file's successful generation for schema validation, TIA import, AR negotiation or real I/O exchange.
