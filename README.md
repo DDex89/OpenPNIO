@@ -37,11 +37,11 @@ sudo ./build/openpnio_dcp_probe eth0
 
 ## Hardware milestone: DCP validated on Raspberry Pi 1 (2026-10-17)
 
-**Real Ethernet laboratory testing on ARMv6 has verified DCP Identify All, Get IP, Get Name, Set Name, state readback and explicit refusal of an unauthorized IP change.** A follow-up Get IP confirmed that the interface still had its original IP/mask/gateway. Pi 1 CTest: **7/7 passed**; GitHub Actions also passed C and offline Python regression suites. The Set Name test used RAM only; persistence and accepting changed IP were **not** hardware-validated.
+**Real Ethernet laboratory testing on ARMv6 has verified DCP Identify All, Get IP, Get Name, Set Name, state readback and explicit refusal of an unauthorized IP change.** A follow-up Get IP confirmed that the interface still had its original IP/mask/gateway. Initial Pi 1 CTest: **7/7 passed** (later **8/8 passed** including virtual IO). GitHub Actions also passed C and offline Python regression suites. A subsequent Siemens TIA Portal V19 hardware session validated **permanent** DCP Set Name with storage across process restarts. Actual IP changes remain deliberately blocked.
 
 Read the [hardware validation report](docs/hardware-validation-2026-10-17.md), the [S7-1500 interoperability roadmap](docs/s7-1500-integration-roadmap.md), and the [proposed IP assignment safety policy](docs/decisions/0008-dcp-ip-assignment-policy.md).
 
-**This is a DCP discovery/configuration milestone, not a working PROFINET IO Device.** GSDML, RPC/CM, AR establishment, cyclic RTC1 I/O and Siemens interoperability remain future work.
+**This is a Siemens TIA Portal DCP discovery/configuration interoperability milestone, not a working PROFINET IO Device.** GSDML import, RPC/CM, AR establishment, cyclic RTC1 I/O and actual S7-1500 PLC connectivity remain future work.
 
 ## Documentation
 
@@ -49,6 +49,7 @@ Read the [hardware validation report](docs/hardware-validation-2026-10-17.md), t
 - [Reference audit](docs/reference-projects.md)
 - [Linux DCP responder and Windows Python client](docs/linux-dcp-probe.md)
 - [DCP Pi 1 hardware validation results](docs/hardware-validation-2026-10-17.md)
+- [Siemens TIA Portal V19 DCP hardware interoperability](docs/siemens-tia-v19-dcp-validation-2026-10-17.md)
 - [Siemens S7-1500 interoperability roadmap](docs/s7-1500-integration-roadmap.md)
 - [Portable virtual 8DI/8DO module catalog](docs/virtual-io-model.md)
 - [ADR 0008: Proposed guarded DCP IP assignment](docs/decisions/0008-dcp-ip-assignment-policy.md)
