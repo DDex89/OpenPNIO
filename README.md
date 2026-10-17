@@ -13,7 +13,13 @@ The long-term goal is a platform-independent PROFINET IO Device stack for Linux 
 - DCP Set station name with qualifier-aware temporary/permanent storage and IP suite with safe callbacks (experimental)
 - Linux AF_PACKET DCP Identify/Get/guarded Set responder: reports live IPv4 parameters, optional station-name persistence, never changes Linux network IP
 - Windows/Linux Scapy DCP bench client for Identify, Get and explicitly confirmed Set
-- Portable virtual **8DI + 8DO** process model (one byte each, slot/subslot validation, safe DO=0 on disconnect); **not yet connected to PROFINET AR/RTC1**
+- Portable virtual **8DI + 8DO** process model (one byte each, DAP/PDev interface and port subslot descriptors, safe DO=0 on disconnect); **not yet connected to PROFINET AR/RTC1**
+- **LLDP IEEE 802.1AB** frame codec/parser and optional Linux basic 5-second advertisement with `--lldp` (PROFINET organizational extensions and topology still missing)
+- **DCE/RPC v4 connectionless** 80-byte header parser, endianness/body-length checks (**not** RPC endpoint/CM server)
+- **RTC1** Ethernet/VLAN0 priority-tag frame and APDU-status codec (**not** cyclic I/O timing or negotiated IOCR)
+- AR/watchdog **simulation core** that makes virtual DO safe when stopped/timed out; no CM Connect or real AR state yet
+- Experimental **GSDML-V2.32 preview generator** with explicit owned-VendorID gating (not yet PI-XSD-validated or imported into TIA Portal)
+- Read-only six-operation batch DCP client mode (`--batch-read MAC`) plus Pi 1 regression script (`scripts/pi1-batch-validation.sh`)
 - CMake/CTest C tests, offline Python framing tests, and GitHub Actions CI
 
 ## Raspberry Pi 1 quick start (headless)
@@ -50,6 +56,7 @@ Read the [hardware validation report](docs/hardware-validation-2026-10-17.md), t
 - [Linux DCP responder and Windows Python client](docs/linux-dcp-probe.md)
 - [DCP Pi 1 hardware validation results](docs/hardware-validation-2026-10-17.md)
 - [Siemens TIA Portal V19 DCP hardware interoperability](docs/siemens-tia-v19-dcp-validation-2026-10-17.md)
+- [Consolidated Siemens + Pi 1 protocol batch test plan](docs/siemens-batch-test-plan.md)
 - [Siemens S7-1500 interoperability roadmap](docs/s7-1500-integration-roadmap.md)
 - [Portable virtual 8DI/8DO module catalog](docs/virtual-io-model.md)
 - [ADR 0008: Proposed guarded DCP IP assignment](docs/decisions/0008-dcp-ip-assignment-policy.md)
@@ -63,4 +70,4 @@ OpenPNIO's original implementation is licensed under [MIT](LICENSE). Reference p
 
 ## Limitations and safety
 
-DCP implementation is incomplete, identity IDs in the Linux probe are placeholders, and in-memory station changes require explicit opt-in (with optional atomic file persistence). AR, RPC/CM, RTC1, cyclic I/O, GSDML and real PLC interoperability remain future work. Never connect the experimental probe to a production industrial network.
+DCP implementation is incomplete, identity IDs in the Linux probe remain unassigned placeholders, and station-name changes require explicit opt-in (with optional atomic file persistence). Working CM/AR, a functioning PNIO RPC server, cyclic RTC1 I/O, validated GSDML import and real S7-1500 PLC interoperability remain future work. The new protocol frame codecs and simulated watchdog do **not** establish a functioning IO Device. Never connect the experimental probe to a production industrial network.
