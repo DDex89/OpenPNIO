@@ -100,8 +100,14 @@ def build_gsdml(cfg, vendor_id, device_id, vendor_name, dns_name):
     subslots = elem(dap, "SubslotList")
     elem(subslots, "SubslotItem", SubslotNumber="32768", TextId="IFACE_TEXT")
     elem(subslots, "SubslotItem", SubslotNumber="32769", TextId="PORT_TEXT")
-    elem(dap, "IOConfigData", MaxInputLength="1", MaxOutputLength="1",
-         MaxDataLength="2")
+    # TIA Portal V19 compiles the complete per-direction IOCR C-SDU,
+    # including IOPS/IOCS and user-data qualifiers for the configured
+    # DAP/PDev/8DI/8DO submodules. The lab configuration compiled as
+    # 6 input + 6 output bytes (12 total), even though user data is
+    # precisely 1 DI byte and 1 DO byte. Do not confuse IOCR limits
+    # with process-image payload sizes or claim runtime RTC1 support.
+    elem(dap, "IOConfigData", MaxInputLength="6", MaxOutputLength="6",
+         MaxDataLength="12")
     use = elem(dap, "UseableModules")
     elem(use, "ModuleItemRef", ModuleItemTarget="M_DI", AllowedInSlots="1")
     elem(use, "ModuleItemRef", ModuleItemTarget="M_DO", AllowedInSlots="2")
