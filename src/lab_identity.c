@@ -6,7 +6,8 @@ int openpnio_lab_identity_parse(const char *text, uint16_t *value)
 {
     char *end = 0;
     unsigned long parsed;
-    if (!text || !*text || !value || text[0]=='-' || text[0]=='+')
+    if (!text || !*text || !value || text[0]=='-' || text[0]=='+' ||
+        (text[0]=='0' && text[1]!='\0' && text[1]!='x' && text[1]!='X'))
         return -1;
     errno=0;
     parsed=strtoul(text,&end,0);
