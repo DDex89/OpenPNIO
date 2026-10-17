@@ -18,7 +18,8 @@ The long-term goal is a platform-independent PROFINET IO Device stack for Linux 
 - **DCE/RPC v4 connectionless** 80-byte header parser, endianness/body-length checks (**not** RPC endpoint/CM server)
 - **RTC1** Ethernet/VLAN0 priority-tag frame and APDU-status codec (**not** cyclic I/O timing or negotiated IOCR)
 - AR/watchdog **simulation core** that makes virtual DO safe when stopped/timed out; no CM Connect or real AR state yet
-- Experimental **GSDML-V2.32 preview generator** with explicit owned-VendorID gating (not yet PI-XSD-validated or imported into TIA Portal)
+- Experimental **GSDML-V2.32 preview generator** with assigned-VendorID gating and a separately acknowledged unregistered isolated-lab mode (not yet PI-XSD-validated or imported into TIA Portal)
+- Session-only lab DCP VendorID/DeviceID override via explicit CLI flags (no borrowed manufacturer identity hardcoded, persisted, or checked in; normal default remains `0x0000/0x0000`)
 - Read-only six-operation batch DCP client mode (`--batch-read MAC`) plus Pi 1 regression script (`scripts/pi1-batch-validation.sh`)
 - CMake/CTest C tests, offline Python framing tests, and GitHub Actions CI
 
@@ -57,6 +58,7 @@ Read the [hardware validation report](docs/hardware-validation-2026-10-17.md), t
 - [DCP Pi 1 hardware validation results](docs/hardware-validation-2026-10-17.md)
 - [Siemens TIA Portal V19 DCP hardware interoperability](docs/siemens-tia-v19-dcp-validation-2026-10-17.md)
 - [Consolidated Siemens + Pi 1 protocol batch test plan](docs/siemens-batch-test-plan.md)
+- [Ephemeral lab identity override without committing borrowed VendorIDs](docs/lab-identity-override.md)
 - [Siemens S7-1500 interoperability roadmap](docs/s7-1500-integration-roadmap.md)
 - [Portable virtual 8DI/8DO module catalog](docs/virtual-io-model.md)
 - [ADR 0008: Proposed guarded DCP IP assignment](docs/decisions/0008-dcp-ip-assignment-policy.md)
@@ -70,4 +72,4 @@ OpenPNIO's original implementation is licensed under [MIT](LICENSE). Reference p
 
 ## Limitations and safety
 
-DCP implementation is incomplete, identity IDs in the Linux probe remain unassigned placeholders, and station-name changes require explicit opt-in (with optional atomic file persistence). Working CM/AR, a functioning PNIO RPC server, cyclic RTC1 I/O, validated GSDML import and real S7-1500 PLC interoperability remain future work. The new protocol frame codecs and simulated watchdog do **not** establish a functioning IO Device. Never connect the experimental probe to a production industrial network.
+DCP implementation is incomplete, default DCP identity IDs in the Linux probe remain unassigned placeholders (opt-in session-only lab overrides exist), and station-name changes require explicit opt-in (with optional atomic file persistence). Working CM/AR, a functioning PNIO RPC server, cyclic RTC1 I/O, validated GSDML import and real S7-1500 PLC interoperability remain future work. The new protocol frame codecs and simulated watchdog do **not** establish a functioning IO Device. Never connect the experimental probe to a production industrial network.
