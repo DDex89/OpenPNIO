@@ -19,7 +19,7 @@ git pull
 sh scripts/pi1-batch-validation.sh
 ```
 
-This compiles with `-j1` suitable for Pi 1 ARMv6, executes CTest **13 checks** and Python **16 checks** (as of 2026-10-17) and leaves the interface untouched. A green GitHub Actions build does not replace this specific hardware run.
+This compiles with `-j1` suitable for Pi 1 ARMv6, executes CTest **13 checks** and Python **20 checks** in latest GitHub CI (Pi 1 last locally reported 16 checks) and leaves the interface untouched. A green GitHub Actions build does not replace this specific hardware run.
 
 For reference, unit test groups cover DCP parser/Identify/Get/guarded Set, IEEE LLDP frame build/parse, DCE/RPC v4 UDP header/drep/body bounds, generic RTC1 L2 tagged/untagged frame/APDU fields, provisional virtual 8DI/8DO device catalog, simulated AR connection watchdog/safe outputs, and GSDML XML structure and ID controls. None of these offline tests alone establishes Siemens PLC interoperability.
 
@@ -71,7 +71,7 @@ python3 tools/generate_gsdml.py --preview --output /tmp/OpenPNIO-PREVIEW.xml
 This generates XML with **UNASSIGNED** `VendorID=0x0000` / `DeviceID=0x0000` to verify manifest/schema structure. **Do not import the preview as an actual device** or use it to initiate S7-1500 connections. Before a real GSDML import, request an assigned VendorID from **PROFIBUS & PROFINET International (PI)** and choose your DeviceID, then validate against the official GSDML V2.32 XSD. An importable candidate can be generated via:
 
 ```sh
-python3 tools/generate_gsdml.py --vendor-id 0xYOUR_PI_ASSIGNED_ID --device-id 0xYOUR_DEVICE_ID --confirm-owned-vendor-id --output /tmp/GSDML-V2.32-OpenPNIO-Lab.xml
+python3 tools/generate_gsdml.py --vendor-id 0xYOUR_PI_ASSIGNED_ID --device-id 0xYOUR_DEVICE_ID --confirm-owned-vendor-id --output /tmp/GSDML-V2.32-OpenPNIO-Lab-20261017.xml
 ```
 
 The symbolic placeholders in the example are **not valid arguments**: supply actual numeric hex values. An additional **unregistered lab-only** experimental identity mode now exists in the GSDML generator and DCP responder; it requires explicit isolated-lab confirmations, takes a pair of IDs strictly as local parameters, and does NOT insert any borrowed identity into tracked GitHub files. See [lab identity override instructions](lab-identity-override.md). This mode must not be used on an ordinary/shared network or taken as proof of PI VendorID ownership. Even successful GSDML import would only validate an XML/catalog description, not that a PROFINET controller can establish AR or exchange IO.
@@ -103,6 +103,18 @@ After fixing the first two issues, TIA V19 reported **two new SchemaValidation e
 - `PortSubmoduleItem`: incomplete content, expected `RecordDataList` or `MAUTypeList`, line 56. The generator now includes `<MAUTypeList><MAUTypeItem Value="16" AdjustSupported="false" /></MAUTypeList>` corresponding to the port's declared `MAUTypes="16"`. No runtime port speed changes are implemented.
 
 A second Python regression verifies both mandatory structures. **Siemens TIA re-import with these changes is still pending**. Keep the process running and only regenerate/copy local XML, using identical explicitly acknowledged session-only lab IDs; do not commit borrowed identities.
+
+### Third TIA V19 GSDML import attempt — semantic checks, not schema syntax (2026-10-17)
+
+The latest Siemens install log again says **GSD file was not installed**, but the earlier missing attribute/child-order failures are gone. It reports 11 **semantic GSD checker** errors:
+
+- The previous local XML filename lacked a release date. Installer candidates now require **`GSDML-V2.32-Vendor-Family-YYYYMMDD.xml`** (optionally HHMMSS), per Siemens naming guidance.
+- `xsi:schemaLocation` lacked the relative `..\\xsd\\` prefix. The generated XML now uses `..\\xsd\\GSDML-DeviceProfile-V2.32.xsd`.
+- `TimingProperties/ReductionRatio` omitted mandatory values `256 512`. Added.
+- Using `PNIO_Version=V2.32` required multiple unsupported *runtime* capabilities: `CertificationInfo`, `MultipleWriteSupported`, `LLDP_NoD_Supported`, `ResetToFactoryModes=2`, `PTP_BoundarySupported`, and `DCP_BoundarySupported`, and imposed additional `StartupMode` restrictions. **Do not set these flags to true just to make GSD validation pass.** Instead the XML schema remains V2.32, but the incomplete lab prototype declares `PNIO_Version=V2.3` and `StartupMode=Legacy`. Even this is not proof of live protocol conformance.
+- `PortSubmoduleItem` had deprecated `MAUTypes=16` alongside `MAUTypeList` with `AdjustSupported=false`. A PI forum answer confirms that the redundant `MAUTypes` triggers an obligation to support adjustment: **remove the deprecated attribute** and keep the explicit `MAUTypeList` declaration.
+
+These changes are guarded by offline tests; **TIA re-import and official XSD validation are still pending**. The next local test XML filename is `GSDML-V2.32-OpenPNIO-Lab-20261017.xml` (user-supplied test IDs at runtime only), generated and copied separately from the ongoing live DCP/LLDP responder. The earlier filename `GSDML-V2.32-OpenPNIO-LOCAL.lab.xml` should no longer be used.
 
 ## Acceptance matrix
 
