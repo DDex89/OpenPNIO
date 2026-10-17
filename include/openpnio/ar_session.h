@@ -35,3 +35,5 @@ void openpnio_ar_session_release(openpnio_ar_session_t *s);
 #ifdef __cplusplus
 }
 #endif
+
+#endif /* OPENPNIO_AR_SESSION_H */
